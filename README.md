@@ -1,4 +1,4 @@
-# 风浪潮
+# windreef
 
 帆板用的风、浪、潮汐预报网站：https://boluxu.github.io/windreef/
 

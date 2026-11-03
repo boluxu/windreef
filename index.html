@@ -355,8 +355,12 @@ function fitTide(ts,vs){
   for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(A[r][c])>Math.abs(A[p][c]))p=r;[A[c],A[p]]=[A[p],A[c]];[b[c],b[p]]=[b[p],b[c]];
     for(let r=c+1;r<n;r++){const f=A[r][c]/A[c][c];if(!f)continue;for(let k=c;k<n;k++)A[r][k]-=f*A[c][k];b[r]-=f*b[c]}}
   const x=new Float64Array(n);for(let r=n-1;r>=0;r--){let s=b[r];for(let k=r+1;k<n;k++)s-=A[r][k]*x[k];x[r]=s/A[r][r]}
-  return {h:t=>{const tt=t-t0;let s=0;for(let j=0;j<w.length;j++)s+=x[1+2*j]*Math.cos(w[j]*tt)+x[2+2*j]*Math.sin(w[j]*tt);return s}};
+  return {t0,x:Array.from(x,v=>+v.toFixed(5))};
 }
+// 潮汐系数按 UTC 时间拟合；显示时用当地时差换算，这样缓存一周也不受夏令时影响
+function tideFn(c,offsetSec){const w=CONS.map(k=>k*Math.PI/180),x=c.x,off=offsetSec/3600;
+  return t=>{const tt=t-off-c.t0;let s=0;for(let j=0;j<w.length;j++)s+=x[1+2*j]*Math.cos(w[j]*tt)+x[2+2*j]*Math.sin(w[j]*tt);return s}}
+function tideCoef(td){if(!td)return null;const off=(td.utc_offset_seconds||0)/3600;return fitTide(td.hourly.time.map(s=>parseT(s)-off),td.hourly.sea_level_height_msl)}
 function extrema(f,a,b){const out=[];const dt=0.1;let p=f(a-dt),c=f(a);for(let t=a;t<=b;t+=dt){const nx=f(t+dt);if(c>p&&c>=nx)out.push({t,hi:true});else if(c<p&&c<=nx)out.push({t,hi:false});p=c;c=nx}
   return out.map(e=>{const y0=f(e.t-dt),y1=f(e.t),y2=f(e.t+dt);const d=(y0-2*y1+y2);const off=d?0.5*(y0-y2)/d*dt:0;return{t:e.t+off,h:f(e.t+off),hi:e.hi}})}
 
@@ -382,20 +386,20 @@ async function getMini(s,land){
     if(c)return c;throw e}
 }
 function normalize(raw){
-  const {fc,mr,td}=raw;const H=fc.hourly,M=mr?mr.hourly:{time:[]};
+  const {fc,mr,tc}=raw;const H=fc.hourly,M=mr?mr.hourly:{time:[]};
   const mIdx=new Map(M.time.map((t,i)=>[t,i]));
   const pick=(k,i)=>{if(i==null)return null;const a=M[k+"_marine_best_match"]??M[k];const g=M[k+"_ncep_gfswave025"];const v=a?a[i]:null;return v!=null?v:(g?g[i]:null)};
   const hours=H.time.map((t,i)=>{const j=mIdx.get(t);
     return{t,th:parseT(t),date:t.slice(0,10),hh:+t.slice(11,13),ws:H.wind_speed_10m[i],wg:H.wind_gusts_10m[i],wd:H.wind_direction_10m[i],temp:H.temperature_2m[i],pr:H.precipitation[i],pp:H.precipitation_probability?H.precipitation_probability[i]:null,
       wh:pick("wave_height",j),wdir:pick("wave_direction",j),wp:pick("wave_period",j),sh:pick("swell_wave_height",j),sd:pick("swell_wave_direction",j),sp:pick("swell_wave_period",j),sst:pick("sea_surface_temperature",j)}}).filter(h=>h.ws!=null);
-  if(raw.cmp){const ix=new Map(H.time.map((t,i)=>[t,i]));CMP.forEach(([k])=>{const c=raw.cmp[k];if(!c)return;const cm=new Map(c.hourly.time.map((t,i)=>[t,c.hourly.wind_speed_10m[i]]));hours.forEach(h=>{(h.cmp=h.cmp||{})[k]=cm.get(h.t)??null})})}
+  if(raw.cmp){CMP.forEach(([k])=>{const c=raw.cmp[k];if(!c)return;const cm=new Map(c.hourly.time.map((t,i)=>[t,c.hourly.wind_speed_10m[i]]));hours.forEach(h=>{(h.cmp=h.cmp||{})[k]=cm.get(h.t)??null})})}
   const sun={};fc.daily.time.forEach((d,i)=>sun[d]={rise:fc.daily.sunrise[i],set:fc.daily.sunset[i]});
-  fit=td?fitTide(td.hourly.time.map(parseT),td.hourly.sea_level_height_msl):null;
-  if(fit)hours.forEach(h=>h.tide=fit.h(h.th));
   const dates=[...new Set(hours.map(h=>h.date))];
-  const tideX=fit?extrema(fit.h,hours[0].th,hours[hours.length-1].th+1):[];
-  return{hours,sun,dates,tideX,tz:fc.timezone};
+  const d={hours,sun,dates,tideX:[],tz:fc.timezone,off:fc.utc_offset_seconds||0,tc:null};
+  fit=null;if(tc)applyTide(d,tc);
+  return d;
 }
+function applyTide(d,tc){fit={h:tideFn(tc,d.off)};d.tc=tc;d.hours.forEach(h=>h.tide=fit.h(h.th));d.tideX=extrema(fit.h,d.hours[0].th,d.hours[d.hours.length-1].th+1)}
 
 /* ---------- router ---------- */
 function go(view){if(view==="home"){if(location.hash){history.pushState(null,"",location.pathname+location.search);}route()}else{location.hash=view}}
@@ -566,29 +570,41 @@ function showSpot(){
   data=null;loadSpot();
 }
 const CMP=[["ecmwf_ifs025","ECMWF"],["gfs_seamless","GFS"],["icon_seamless","ICON"]];
-const seaCache={};
-async function fetchRaw(s,m){
-  const base=m==="compare"?"best_match":m;const u=urls(s,base);
-  // 海浪和潮汐与风的模型无关：同一地点 30 分钟内只下载一次，切换模型时只重新取风
-  const key=s.lat.toFixed(3)+","+s.lon.toFixed(3),mc=seaCache[key],fresh=mc&&Date.now()-mc.ts<30*60e3;
+// 本地缓存：风 30 分钟、海浪 30 分钟、潮汐系数 7 天。打开地点页时先显示缓存（最多 12 小时内），同时在后台更新
+const spotKey=s=>s.lat.toFixed(3)+","+s.lon.toFixed(3);
+function cGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}}
+function cSet(k,v){const o=JSON.stringify({ts:Date.now(),v});try{localStorage.setItem(k,o)}catch(e){cPrune();try{localStorage.setItem(k,o)}catch(e2){}}}
+function cPrune(){try{const ks=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith("wr5.c.")&&!k.startsWith("wr5.c.t."))ks.push([k,(cGet(k)||{}).ts||0])}
+  ks.sort((a,b)=>b[1]-a[1]).slice(6).forEach(([k])=>localStorage.removeItem(k))}catch(e){}}
+async function cached(k,maxAge,fetcher){const c=cGet(k);if(c&&Date.now()-c.ts<maxAge)return c.v;const v=await fetcher();cSet(k,v);return v}
+async function fetchWind(s,m){
+  const base=m==="compare"?"best_match":m;
   const cmpP=m==="compare"?Promise.all(CMP.map(async([k])=>{try{return[k,await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m&forecast_days=16&wind_speed_unit=kn&timezone=auto&models=${k}&cell_selection=${s.lake?"nearest":"sea"}`)]}catch(e){return[k,null]}})):null;
-  try{const[fc,mr,td]=await Promise.all([getJSON(u.fc),s.lake?null:fresh?mc.mr:getJSON(u.mr),s.lake?null:fresh?mc.td:getJSON(u.td).catch(()=>null)]);
-    if(!s.lake)seaCache[key]={mr,td,ts:fresh?mc.ts:Date.now()};
-    let cmp=null;if(cmpP){cmp=Object.fromEntries(await cmpP)}
-    online=true;return{raw:{fc,mr,td,cmp},mode:"live"}}
-  catch(e){if(online==null)online=false}
-  if(SNAPSHOT&&sameSpot(SNAPSHOT.spot,s)){const cmp=m==="compare"?Object.fromEntries(CMP.map(([k])=>[k,SNAPSHOT.fc[k]])):null;
-    return{raw:{fc:SNAPSHOT.fc[base]||SNAPSHOT.fc.best_match,mr:SNAPSHOT.mr,td:SNAPSHOT.td,cmp,fetched:SNAPSHOT.fetched},mode:"snap"}}
-  return{raw:null}
+  const fc=await getJSON(urls(s,base).fc);return{fc,cmp:cmpP?Object.fromEntries(await cmpP):null}}
+async function fetchTide(s){return tideCoef(await getJSON(urls(s,"best_match").td))}
+function showData(parts,mode){
+  const prevTh=data&&data.hours[selI]?data.hours[selI].th:null,first=!data;
+  data=normalize(parts);data.mode=mode;
+  let i=prevTh!=null?data.hours.findIndex(h=>h.th===prevTh):-1;if(i<0){const n=nowTh(data.tz);i=data.hours.findIndex(h=>h.th>=n-0.5)}selI=i<0?0:i;
+  $("#banner").innerHTML=mode==="snap"?`<div class="banner"><b>离线快照</b>，抓取于 ${new Date(parts.fetched).toLocaleString("zh-CN",{timeZone:"Australia/Sydney",month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false})}（悉尼时间）。当前环境不能联网。</div>`:"";
+  if(first){renderSpotMap();renderSpot(true)}else{if(!spotMap&&!$("#spotMap"))renderSpotMap();renderSpot(false)}
 }
 async function loadSpot(){
-  const seq=++loadSeq;const r=await fetchRaw(cur,model);const raw=r.raw,mode=r.mode;
+  const seq=++loadSeq,s=cur,m=model,key=spotKey(s);
+  const wK=`wr5.c.w.${key}.${m}`,sK=`wr5.c.s.${key}`,tK=`wr5.c.t.${key}`;
+  const cw=cGet(wK),cs=cGet(sK),ct=cGet(tK);let shown=false;
+  if(cw&&Date.now()-cw.ts<12*3600e3){showData({fc:cw.v.fc,cmp:cw.v.cmp,mr:cs&&cs.v,tc:ct&&ct.v},"cache");shown=true}
+  const tideP=s.lake?Promise.resolve(null):cached(tK,7*864e5,()=>fetchTide(s)).catch(()=>null);
+  let w=null,sea=null;
+  try{[w,sea]=await Promise.all([cached(wK,30*60e3,()=>fetchWind(s,m)),s.lake?null:cached(sK,30*60e3,()=>getJSON(urls(s,"best_match").mr))]);online=true}catch(e){if(online==null)online=false}
   if(seq!==loadSeq)return;
-  if(!raw){$("#app").innerHTML=`<div class="banner"><b>载入失败</b>。${online===false?"当前环境不能联网，只有 Long Reef 有离线数据。放到 GitHub Pages 上即可查看任何地点。":"请检查网络后重试。"}</div>`;renderSpotMap();return}
-  data=normalize(raw);
-  const n=nowTh(data.tz);let i=data.hours.findIndex(h=>h.th>=n-0.5);selI=i<0?0:i;
-  $("#banner").innerHTML=mode==="snap"?`<div class="banner"><b>离线快照</b>，抓取于 ${new Date(raw.fetched).toLocaleString("zh-CN",{timeZone:"Australia/Sydney",month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false})}（悉尼时间）。当前环境不能联网。</div>`:"";
-  renderSpotMap();renderSpot(true);
+  const ctNow=cGet(tK);
+  if(w){const ctUsed=shown&&ct;if(!(shown&&Date.now()-cw.ts<30*60e3&&(!cs||Date.now()-cs.ts<30*60e3)))showData({fc:w.fc,cmp:w.cmp,mr:sea,tc:ctNow&&ctNow.v},"live")}
+  else if(!shown){
+    if(SNAPSHOT&&sameSpot(SNAPSHOT.spot,s)){const base=m==="compare"?"best_match":m;showData({fc:SNAPSHOT.fc[base]||SNAPSHOT.fc.best_match,mr:SNAPSHOT.mr,tc:tideCoef(SNAPSHOT.td),cmp:m==="compare"?Object.fromEntries(CMP.map(([k])=>[k,SNAPSHOT.fc[k]])):null,fetched:SNAPSHOT.fetched},"snap");return}
+    $("#app").innerHTML=`<div class="banner"><b>载入失败</b>。${online===false?"当前环境不能联网，只有 Long Reef 有离线数据。放到 GitHub Pages 上即可查看任何地点。":"请检查网络后重试。"}</div>`;renderSpotMap();return}
+  const tc=await tideP;if(seq!==loadSeq||!data)return;
+  if(tc&&!data.tc){applyTide(data,tc);renderSpot(false)}
 }
 function overlaySVG(h){
   const C=90,R=56;
@@ -756,9 +772,9 @@ function setDrawer(){
 document.addEventListener("click",e=>{
   if($("#vSpot").hidden||!data)return;
   const m=e.target.closest("#app [data-m]");if(m){if(m.dataset.m!==model){model=m.dataset.m;store.set("wr5.model",model);
-    document.querySelectorAll("#app [data-m]").forEach(b=>b.setAttribute("aria-pressed",b===m));const sw=$("#sheet");if(sw)sw.style.opacity=".45";toast(model==="compare"?"正在载入三个模型…":"正在载入…");const th=data.hours[selI].th;
-    const seq=++loadSeq;fetchRaw(cur,model)
-      .then(({raw})=>{if(!raw||seq!==loadSeq)return;data=normalize(raw);const i=data.hours.findIndex(h=>h.th===th);selI=i<0?0:i;renderSpot(true)})}return}
+    document.querySelectorAll("#app [data-m]").forEach(b=>b.setAttribute("aria-pressed",b===m));
+    if(!cGet(`wr5.c.w.${spotKey(cur)}.${model}`)){const sw=$("#sheet");if(sw)sw.style.opacity=".45";toast(model==="compare"?"正在载入三个模型…":"正在载入…")}
+    loadSpot()}return}
   const dbtn=e.target.closest("#days [data-d]");if(dbtn){const dt=dbtn.dataset.d;const n=nowTh(data.tz);let i=data.hours.findIndex(h=>h.date===dt&&h.hh===12);if(dt===localDateIn(data.tz)){const j=data.hours.findIndex(h=>h.th>=n-0.5);if(j>=0)i=j}if(i<0)i=data.hours.findIndex(h=>h.date===dt);select(i,"day");return}
   const td=e.target.closest("#sheet td[data-th]");if(td){select(data.hours.findIndex(h=>h.th===+td.dataset.th),"nearest");return}
 });

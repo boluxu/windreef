@@ -245,8 +245,11 @@ const SNAPSHOT = /*SNAPSHOT*/null;
 "use strict";
 const $=s=>document.querySelector(s);
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-const DEF_FAVS=[{name:"Long Reef Headland",lat:-33.7418,lon:151.3222},{name:"Botany Bay（Dolls Point）",lat:-33.9935,lon:151.1495},{name:"Kurnell（Silver Beach）",lat:-34.0048,lon:151.2016}];
+const DALIAN=[{name:"大连 仙浴湾",lat:39.7089,lon:121.5068},{name:"大连 夏家河子",lat:39.0215,lon:121.4895}];
+const DEF_FAVS=[...DALIAN,{name:"Long Reef Headland",lat:-33.7418,lon:151.3222}];
 let favs=store.get("wr5.favs",DEF_FAVS);
+// 已经用过旧版本的浏览器：把两个大连地点补到收藏最前面（只做一次）
+if(!store.get("wr5.mig1",false)){favs=[...DALIAN.filter(d=>!favs.some(f=>Math.abs(f.lat-d.lat)<1e-3&&Math.abs(f.lon-d.lon)<1e-3)),...favs];store.set("wr5.favs",favs);store.set("wr5.mig1",true)}
 let recent=store.get("wr5.recent",[]);
 let cur=store.get("wr5.cur",favs[0]||DEF_FAVS[0]);
 let model=store.get("wr5.model","best_match");

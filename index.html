@@ -246,10 +246,13 @@ const SNAPSHOT = /*SNAPSHOT*/null;
 const $=s=>document.querySelector(s);
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const DALIAN=[{name:"大连 仙浴湾",lat:39.7089,lon:121.5068},{name:"大连 夏家河子",lat:39.0215,lon:121.4895}];
-const DEF_FAVS=[...DALIAN,{name:"Long Reef Headland",lat:-33.7418,lon:151.3222}];
+// lake:true = 内陆湖：风取湖面最近的格点，没有海浪和潮汐
+const YUANDANG={name:"上海 元荡湖",lat:31.1215,lon:120.9035,lake:true};
+const DEF_FAVS=[...DALIAN,YUANDANG,{name:"Long Reef Headland",lat:-33.7418,lon:151.3222}];
 let favs=store.get("wr5.favs",DEF_FAVS);
 // 已经用过旧版本的浏览器：把两个大连地点补到收藏最前面（只做一次）
 if(!store.get("wr5.mig1",false)){favs=[...DALIAN.filter(d=>!favs.some(f=>Math.abs(f.lat-d.lat)<1e-3&&Math.abs(f.lon-d.lon)<1e-3)),...favs];store.set("wr5.favs",favs);store.set("wr5.mig1",true)}
+if(!store.get("wr5.mig2",false)){if(!favs.some(f=>Math.abs(f.lat-YUANDANG.lat)<1e-3&&Math.abs(f.lon-YUANDANG.lon)<1e-3)){const k=favs.findIndex(f=>DALIAN.some(d=>Math.abs(f.lat-d.lat)<1e-3&&Math.abs(f.lon-d.lon)<1e-3));let at=0;favs.forEach((f,i)=>{if(DALIAN.some(d=>Math.abs(f.lat-d.lat)<1e-3&&Math.abs(f.lon-d.lon)<1e-3))at=i+1});favs.splice(at,0,YUANDANG)}store.set("wr5.favs",favs);store.set("wr5.mig2",true)}
 let recent=store.get("wr5.recent",[]);
 let cur=store.get("wr5.cur",favs[0]||DEF_FAVS[0]);
 let model=store.get("wr5.model","best_match");
@@ -360,7 +363,7 @@ function extrema(f,a,b){const out=[];const dt=0.1;let p=f(a-dt),c=f(a);for(let t
 /* ---------- data ---------- */
 async function getJSON(u){const r=await fetch(u);if(!r.ok){let m="";try{m=(await r.json()).reason}catch(e){}throw new Error(m||("HTTP "+r.status))}return r.json()}
 function urls(s,m){
-  const fc=`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation,precipitation_probability&daily=sunrise,sunset&forecast_days=16&wind_speed_unit=kn&timezone=auto&models=${m}&cell_selection=sea`;
+  const fc=`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation,precipitation_probability&daily=sunrise,sunset&forecast_days=16&wind_speed_unit=kn&timezone=auto&models=${m}&cell_selection=${s.lake?"nearest":"sea"}`;
   const mv="wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,sea_surface_temperature";
   const mr=`https://marine-api.open-meteo.com/v1/marine?latitude=${s.lat}&longitude=${s.lon}&hourly=${mv}&forecast_days=16&timezone=auto&models=best_match,ncep_gfswave025&cell_selection=sea`;
   const td=`https://marine-api.open-meteo.com/v1/marine?latitude=${s.lat}&longitude=${s.lon}&hourly=sea_level_height_msl&past_days=92&forecast_days=16&timezone=auto&cell_selection=sea`;
@@ -370,7 +373,7 @@ const miniCache={};
 async function getMini(s,land){
   const key=`${s.lat.toFixed(3)},${s.lon.toFixed(3)}`;const c=miniCache[key]||store.get("wr5.mini."+key,null);
   if(c&&Date.now()-c.ts<30*60e3){miniCache[key]=c;return c}
-  try{const d=await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&current=wind_speed_10m,wind_direction_10m&forecast_days=7&wind_speed_unit=kn&timezone=auto${land?"":"&cell_selection=sea"}`);
+  try{const d=await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&current=wind_speed_10m,wind_direction_10m&forecast_days=7&wind_speed_unit=kn&timezone=auto${land?"":s.lake?"&cell_selection=nearest":"&cell_selection=sea"}`);
     online=true;const m={ts:Date.now(),tz:d.timezone,ws:d.hourly.wind_speed_10m,time:d.hourly.time,days:d.daily.time.map((t,i)=>({date:t,code:d.daily.weather_code[i],tmax:d.daily.temperature_2m_max[i],tmin:d.daily.temperature_2m_min[i],rain:d.daily.precipitation_sum[i]})),now:d.current&&d.current.wind_speed_10m,nowdir:d.current&&d.current.wind_direction_10m};
     miniCache[key]=m;store.set("wr5.mini."+key,m);return m}
   catch(e){online=online||false;
@@ -379,7 +382,7 @@ async function getMini(s,land){
     if(c)return c;throw e}
 }
 function normalize(raw){
-  const {fc,mr,td}=raw;const H=fc.hourly,M=mr.hourly;
+  const {fc,mr,td}=raw;const H=fc.hourly,M=mr?mr.hourly:{time:[]};
   const mIdx=new Map(M.time.map((t,i)=>[t,i]));
   const pick=(k,i)=>{if(i==null)return null;const a=M[k+"_marine_best_match"]??M[k];const g=M[k+"_ncep_gfswave025"];const v=a?a[i]:null;return v!=null?v:(g?g[i]:null)};
   const hours=H.time.map((t,i)=>{const j=mIdx.get(t);
@@ -409,7 +412,7 @@ function route(){
 }
 window.addEventListener("hashchange",route);
 window.addEventListener("popstate",()=>{if(!location.hash)route()});
-function openSpot(s){cur={name:s.name,lat:+s.lat,lon:+s.lon};store.set("wr5.cur",cur);
+function openSpot(s){cur={name:s.name,lat:+s.lat,lon:+s.lon};if(s.lake)cur.lake=true;store.set("wr5.cur",cur);
   recent=[cur,...recent.filter(r=>!sameSpot(r,cur))].slice(0,12);store.set("wr5.recent",recent);
   if(location.hash==="#spot")route();else location.hash="spot"}
 
@@ -523,7 +526,7 @@ async function runSearch(){
   box.innerHTML=lastRes.length?`<div class="rhead"><b>搜索结果</b></div><div class="rlist" style="margin-top:10px">${lastRes.map((s,i)=>itemHTML(s,i,"s")).join("")}</div>`:'<div class="msg">没找到。试试英文名（例如 Long Reef），或者用地图选点。</div>';
   const rl=box.querySelector(".rlist");if(rl)bindList(rl,lastRes);
 }
-function toggleFav(s){if(isFav(s))favs=favs.filter(f=>!sameSpot(f,s));else favs.push({name:s.name,lat:s.lat,lon:s.lon});store.set("wr5.favs",favs);toast(isFav(s)?"已收藏":"已取消收藏")}
+function toggleFav(s){if(isFav(s))favs=favs.filter(f=>!sameSpot(f,s));else favs.push(Object.assign({name:s.name,lat:s.lat,lon:s.lon},s.lake?{lake:true}:{}));store.set("wr5.favs",favs);toast(isFav(s)?"已收藏":"已取消收藏")}
 
 /* ---------- PICK ---------- */
 let pickMap=null,pickMk=null,pickPt=null;
@@ -565,8 +568,8 @@ function showSpot(){
 const CMP=[["ecmwf_ifs025","ECMWF"],["gfs_seamless","GFS"],["icon_seamless","ICON"]];
 async function fetchRaw(s,m){
   const base=m==="compare"?"best_match":m;const u=urls(s,base);
-  try{const[fc,mr,td]=await Promise.all([getJSON(u.fc),getJSON(u.mr),getJSON(u.td).catch(()=>null)]);
-    let cmp=null;if(m==="compare"){cmp={};await Promise.all(CMP.map(async([k])=>{try{cmp[k]=await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m&forecast_days=16&wind_speed_unit=kn&timezone=auto&models=${k}&cell_selection=sea`)}catch(e){}}))}
+  try{const[fc,mr,td]=await Promise.all([getJSON(u.fc),s.lake?null:getJSON(u.mr),s.lake?null:getJSON(u.td).catch(()=>null)]);
+    let cmp=null;if(m==="compare"){cmp={};await Promise.all(CMP.map(async([k])=>{try{cmp[k]=await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m&forecast_days=16&wind_speed_unit=kn&timezone=auto&models=${k}&cell_selection=${s.lake?"nearest":"sea"}`)}catch(e){}}))}
     online=true;return{raw:{fc,mr,td,cmp},mode:"live"}}
   catch(e){if(online==null)online=false}
   if(SNAPSHOT&&sameSpot(SNAPSHOT.spot,s)){const cmp=m==="compare"?Object.fromEntries(CMP.map(([k])=>[k,SNAPSHOT.fc[k]])):null;
@@ -604,7 +607,7 @@ function renderSpotMap(){
 }
 function roHTML(h){const s=sailFor(h.ws);
   return`<div class="ro"><span class="t">${String(h.hh).padStart(2,"0")}:00</span><span class="k">${h.date===localDateIn(data.tz)?"今天":"周"+WK[wk(h.date)]}</span>
-    <span><b style="color:${windColor(h.ws)}">${wv(h.ws)}</b> <span class="k">${wu()} ${dirName(h.wd)}</span></span><span><b>${f1(h.wh)}</b> <span class="k">米 ${f1(h.wp)}秒</span></span>
+    <span><b style="color:${windColor(h.ws)}">${wv(h.ws)}</b> <span class="k">${wu()} ${dirName(h.wd)}</span></span>${h.wh==null?"":`<span><b>${f1(h.wh)}</b> <span class="k">米 ${f1(h.wp)}秒</span></span>`}
     <span class="sail">${s.v?sailSvg(s.v)+`<b style="color:${sailColor(s.v)}">${s.v}</b><span class="k">m²</span>`:`<span class="k">${s.low?"风太小":"风太大"}</span>`}</span></div>`}
 function updateOverlay(){if(!data)return;const h=data.hours[selI];if(spotOvl)spotOvl.setIcon(L.divIcon({className:"ovl",html:overlaySVG(h),iconSize:[180,180],iconAnchor:[90,90]}));
   const rb=$("#roBox");if(rb)rb.innerHTML=roHTML(h);else if(!spotMap){const b=$("#spotMapBox");if(b)b.innerHTML=`<div class="compassonly" style="background:var(--deep)">${overlaySVG(h)}</div>${roHTML(h)}`}}
@@ -665,7 +668,8 @@ function sheet(){
     sp:["s",L("涌周期","秒"),h=>f1(h.sp)],
     tide:["tval",L("潮位","米"),h=>{const m=tideMarks.get(h.th);return(m?`<span class="mk">${m.hi?"▲":"▼"}${fmtHM(m.t)}</span>`:"")+`${h.tide>=0?"+":""}${h.tide.toFixed(1)}`}]};
   const rows=[["hr","",h=>String(h.hh).padStart(2,"0")]];let gapDone=false;
-  rowCfg().forEach(x=>{if(!x.on)return;if(x.k==="tide"&&!d.tideX.length)return;const r=R[x.k].slice();
+  const noSea=hs.every(h=>h.wh==null&&h.sst==null);
+  rowCfg().forEach(x=>{if(!x.on)return;if(x.k==="tide"&&!d.tideX.length)return;if(noSea&&["sst","wdir","wh","wp","sh","sd","sp"].includes(x.k))return;const r=R[x.k].slice();
     if(["wdir","wh","wp","sh","sd","sp","tide"].includes(x.k)&&!gapDone){gapDone=true;if(rows.length>1)r[0]=(r[0]?r[0]+" ":"")+"gap"}
     rows.push(r);
     if(x.k==="wg"&&model==="compare")CMP.forEach(([k,l])=>rows.push(["c",L(l,wu()),h=>wv(h.cmp&&h.cmp[k]),grad(h=>h.cmp?h.cmp[k]:null)]))});
@@ -679,7 +683,7 @@ function sheet(){
   return s+"</tbody></table></div></div>";
 }
 function tideCard(day){
-  if(!fit)return`<div class="card"><h2>潮汐</h2><div class="note">这个地点没有可用的海平面数据，无法推算潮汐。</div></div>`;
+  if(!fit&&cur.lake)return"";if(!fit)return`<div class="card"><h2>潮汐</h2><div class="note">这个地点没有可用的海平面数据，无法推算潮汐。</div></div>`;
   const ex=data.tideX.filter(x=>dayKey(x.t)===day);
   return`<div class="card"><h2>潮汐 · <b>周${WK[wk(day)]} ${+day.slice(5,7)}月${+day.slice(8)}日</b></h2>${tideSVG(day)}
     <div class="tidelist">${ex.map(x=>`<div class="tl"><span class="k">${x.hi?"高潮":"低潮"}</span><span class="v">${fmtHM(x.t)}</span><span class="h">${x.h>=0?"+":""}${x.h.toFixed(2)} 米</span></div>`).join("")}</div>

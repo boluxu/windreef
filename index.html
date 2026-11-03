@@ -75,6 +75,8 @@ h2.sec button{border:0;background:none;color:var(--accent);font-size:15px;font-w
 .fav .nm .pin{flex:none;color:var(--accent);margin-top:1px}
 .fav .nm .now{margin-left:auto;font-family:var(--display);font-size:17px;color:var(--muted);white-space:nowrap;font-weight:600}
 .fav .nm .now b{font-size:22px}
+.fav .nm .now{text-align:right;line-height:1.1}
+.fav .nm .now .nl{display:block;font-family:var(--body);font-size:11px;font-weight:500;color:var(--dim);margin-bottom:2px}
 .favs{display:flex;flex-direction:column;gap:10px}
 .favrow{display:flex;gap:8px;align-items:stretch}
 .favrow .fav{flex:1;min-width:0}
@@ -378,7 +380,7 @@ async function getMini(s,land){
   const key=`${s.lat.toFixed(3)},${s.lon.toFixed(3)}`;const c=miniCache[key]||store.get("wr5.mini."+key,null);
   if(c&&Date.now()-c.ts<30*60e3){miniCache[key]=c;return c}
   try{const d=await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&current=wind_speed_10m,wind_direction_10m&forecast_days=7&wind_speed_unit=kn&timezone=auto${land?"":s.lake?"&cell_selection=nearest":"&cell_selection=sea"}`);
-    online=true;const m={ts:Date.now(),tz:d.timezone,ws:d.hourly.wind_speed_10m,time:d.hourly.time,days:d.daily.time.map((t,i)=>({date:t,code:d.daily.weather_code[i],tmax:d.daily.temperature_2m_max[i],tmin:d.daily.temperature_2m_min[i],rain:d.daily.precipitation_sum[i]})),now:d.current&&d.current.wind_speed_10m,nowdir:d.current&&d.current.wind_direction_10m};
+    online=true;const m={ts:Date.now(),tz:d.timezone,ws:d.hourly.wind_speed_10m,time:d.hourly.time,days:d.daily.time.map((t,i)=>({date:t,code:d.daily.weather_code[i],tmax:d.daily.temperature_2m_max[i],tmin:d.daily.temperature_2m_min[i],rain:d.daily.precipitation_sum[i]})),now:d.current&&d.current.wind_speed_10m,nowdir:d.current&&d.current.wind_direction_10m,nowt:d.current&&d.current.time};
     miniCache[key]=m;store.set("wr5.mini."+key,m);return m}
   catch(e){online=online||false;
     if(SNAPSHOT&&sameSpot(SNAPSHOT.spot,s)){const H=SNAPSHOT.fc.best_match.hourly;const n=7*24;const days=[];for(let i=0;i<7;i++){const sl=H.precipitation.slice(i*24,i*24+24);days.push({date:H.time[i*24].slice(0,10),rain:sl.reduce((a,b)=>a+(b||0),0)})}
@@ -466,7 +468,7 @@ function renderFavs(){
     if(del){favs.splice(+del.dataset.del,1);store.set("wr5.favs",favs);renderFavs();renderHomeMap();return}
     if(f&&!editMode)openSpot(favs[+f.dataset.i])};
   favs.forEach(async(s,i)=>{try{const m=await getMini(s);const el=$("#fs"+i);if(el)el.innerHTML=stripHTML(m);
-      const n=$("#fnow"+i);if(n&&m.now!=null)n.innerHTML=`${arrow(m.nowdir,16)} <b style="color:${windColor(m.now)}">${wv(m.now)}</b> ${wu()}`;
+      const n=$("#fnow"+i);if(n&&m.now!=null)n.innerHTML=`<span class="nl">现在${m.nowt?" · 当地 "+m.nowt.slice(11,16):""}</span>${arrow(m.nowdir,16)} <b style="color:${windColor(m.now)}">${wv(m.now)}</b> ${wu()}`;
       s._now=m.now;s._dir=m.nowdir;if(online===false&&homeMap)renderHomeMap();else updateHomeMarkers()}
     catch(e){if(online===false&&homeMap)renderHomeMap();const el=$("#fs"+i);if(el)el.innerHTML=`<div class="msg" style="padding:4px 16px 14px">${online===false?"当前环境不能联网，没有这个地点的离线数据。":"载入失败"}</div>`}});
 }
@@ -492,7 +494,7 @@ function renderHomeMap(){
 let homeMarkers=[];
 function updateHomeMarkers(){
   if(!homeMap)return;homeMarkers.forEach(m=>m.remove());homeMarkers=favs.map(s=>{
-    const lab=`<div class="mlabel"><i style="background:${windColor(s._now)}"></i>${s._now!=null?`${wv(s._now)} ${wu()}`:esc(s.name.split(/[（(]/)[0])}</div>`;
+    const lab=`<div class="mlabel"><i style="background:${windColor(s._now)}"></i>${esc(s.name.replace(/^(上海|大连|北京|深圳|青岛|厦门)\s*/,"").split(/[（(]/)[0])}${s._now!=null?` · ${wv(s._now)} ${wu()}`:""}</div>`;
     const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:"",html:lab,iconSize:[0,0]})}).addTo(homeMap);m.on("click",()=>openSpot(s));return m});
 }
 

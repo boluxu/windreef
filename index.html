@@ -97,7 +97,7 @@ h2.sec button{border:0;background:none;color:var(--accent);font-size:15px;font-w
 .ro .k{font-size:13px;color:var(--muted);font-family:var(--body)}
 .ro b{font-size:20px}
 .ro .sail{margin-left:auto;display:flex;align-items:center;gap:4px;color:var(--accent)}
-.ro .sail svg{width:14px;height:18px}
+.ro .sail svg{width:17px;height:22px}
 .spotmap .mapbtn{bottom:auto;top:12px;right:max(12px,env(safe-area-inset-right,0px))}
 .compassonly{display:grid;place-items:center;height:300px}
 .leaflet-container{background:#aad3df;font-family:var(--body)}
@@ -129,30 +129,30 @@ h2.sec button{border:0;background:none;color:var(--accent);font-size:15px;font-w
 .sheetwrap{background:var(--bg)}
 table.sheet{border-collapse:separate;border-spacing:0;font-family:var(--body);font-variant-numeric:tabular-nums lining-nums}
 .sheet th,.sheet td{padding:0;text-align:center;white-space:nowrap}
-.sheet td{min-width:48px;height:38px;font-size:17px;font-weight:500;cursor:pointer;color:var(--ink)}
-.sheet th.lab{position:sticky;left:0;z-index:3;background:var(--bg);font-size:13px;font-weight:500;color:#cfdde3;text-align:right;width:92px;min-width:92px;max-width:92px;border-right:1px solid var(--line);padding:0 10px 0 4px;white-space:nowrap;box-shadow:6px 0 8px -6px rgba(0,0,0,.35)}
-.sheet th.lab small{color:var(--dim);font-size:12px;font-weight:400;margin-left:3px}
-.sheet tr.date th{font-size:13px;font-weight:600;color:var(--muted);text-align:left;padding:12px 0 6px;letter-spacing:.08em}
+.sheet td{min-width:37px;width:37px;height:34px;font-size:15px;font-weight:500;cursor:pointer;color:var(--ink)}
+.sheet th.lab{position:sticky;left:0;z-index:3;background:var(--bg);font-size:12px;font-weight:500;color:#cfdde3;text-align:center;width:56px;min-width:56px;max-width:56px;border-right:1px solid var(--line);padding:0 2px;white-space:nowrap;line-height:1.1;box-shadow:6px 0 8px -6px rgba(0,0,0,.35)}
+.sheet th.lab small{display:block;color:var(--dim);font-size:10.5px;font-weight:400;margin-top:1px}
+.sheet tr.date th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:10px 0 5px;letter-spacing:.08em}
 .sheet tr.date th:not(.lab){border-left:1px solid var(--line)}
-.sheet tr.date th span{position:sticky;left:104px;padding-left:10px}
-.sheet tr.hr td{font-size:17px;font-weight:700;height:40px;background:var(--panel)}
+.sheet tr.date th span{position:sticky;left:62px;padding-left:8px}
+.sheet tr.hr td{font-size:15px;font-weight:700;height:34px;background:var(--panel)}
 .sheet tr.hr td.night{background:#16303d;color:#dfe9ee}
 .sheet td.d0{border-left:1px solid var(--line)}
 .sheet td.col{box-shadow:inset 0 0 0 999px var(--colsel)}
-.sheet tr.hr td.col{background:#6f8e9c;border-radius:12px 12px 0 0;box-shadow:none}
-.sheet tr.last td.col{border-radius:0 0 12px 12px}
-.sheet td.c{color:var(--cellink);font-weight:600;height:40px}
+.sheet tr.hr td.col{background:#6f8e9c;border-radius:10px 10px 0 0;box-shadow:none}
+.sheet tr.last td.col{border-radius:0 0 10px 10px}
+.sheet td.c{color:var(--cellink);font-weight:600;height:34px}
 .sheet td.s{color:#dbe6ea}
 .sheet tr.gap>*{border-top:1px solid var(--line)}
-.sheet tr.gap td,.sheet tr.gap th{height:46px}
-.sheet td.sail{font-size:13px;line-height:1;height:46px}
-.sheet td.sail svg{display:block;margin:3px auto 0;width:16px;height:20px}
+.sheet tr.gap td,.sheet tr.gap th{height:40px}
+.sheet td.sail{font-size:11.5px;line-height:1;height:44px;color:#dbe6ea}
+.sheet td.sail svg{display:block;margin:2px auto 0;width:17px;height:22px}
 .sheet td.sail .ov{color:var(--red)}
 .arr{display:inline-block;width:20px;height:20px;vertical-align:middle}
 .arr svg{display:block}
-.wbox{display:inline-grid;place-items:center;width:40px;height:26px;background:var(--wavebox);color:#fff;border-radius:7px}
-.mk{display:block;font-size:11px;line-height:1;color:var(--tide);font-weight:600;margin-bottom:2px}
-.tval{font-size:16px}
+.wbox{display:inline-grid;place-items:center;width:31px;height:22px;background:var(--wavebox);color:#fff;border-radius:7px}
+.mk{display:block;font-size:9.5px;letter-spacing:-.2px;line-height:1;color:var(--tide);font-weight:600;margin-bottom:2px}
+.tval{font-size:13px}
 .card{background:var(--deep);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .card h2{margin:0;font-size:15px;font-weight:600;color:var(--muted);letter-spacing:.04em}
 .card h2 b{color:var(--ink)}
@@ -217,6 +217,16 @@ table.sheet{border-collapse:separate;border-spacing:0;font-family:var(--body);fo
 .seg{display:flex;background:var(--panel);border-radius:12px;padding:3px;gap:3px}
 .seg button{flex:1;border:0;background:transparent;border-radius:10px;padding:8px 6px;font-size:14px}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--cellink);font-weight:600}
+.rowed{display:flex;flex-direction:column;background:var(--panel);border-radius:12px;overflow:hidden}
+.rrow{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 12px;border-top:1px solid var(--line)}
+.rrow:first-child{border-top:0}
+.rrow span{flex:1}
+.rrow .mv{border:0;background:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--muted)}
+.rrow .mv:disabled{opacity:.25}
+.sw{flex:none;width:44px;height:26px;border-radius:13px;border:0;background:var(--line);position:relative;padding:0}
+.sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.sw[aria-checked="true"]{background:var(--accent)}
+.sw[aria-checked="true"] i{left:21px}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);border-radius:999px;padding:9px 18px;z-index:3000;font-weight:600;font-size:14px}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 </style>
@@ -240,7 +250,9 @@ let favs=store.get("wr5.favs",DEF_FAVS);
 let recent=store.get("wr5.recent",[]);
 let cur=store.get("wr5.cur",favs[0]||DEF_FAVS[0]);
 let model=store.get("wr5.model","best_match");
+const ROWDEF=[["sail","建议帆",1],["wd","风向",1],["ws","风速",1],["wg","阵风",1],["temp","气温",1],["pr","降水",1],["pp","降水概率",0],["sst","水温",1],["wdir","浪向",1],["wh","浪高",1],["wp","浪周期",1],["sh","涌浪",1],["sd","涌浪方向",0],["sp","涌周期",1],["tide","潮位",1]];
 let cfg=Object.assign({weight:75,minSail:3.5,maxSail:9,style:"std",quiver:"",unit:"kn",step:1},store.get("wr.cfg",{}));
+function rowCfg(){let r=Array.isArray(cfg.rows)?cfg.rows.filter(x=>ROWDEF.some(d=>d[0]===x.k)).map(x=>({k:x.k,on:!!x.on})):[];ROWDEF.forEach(d=>{if(!r.some(x=>x.k===d[0]))r.push({k:d[0],on:!!d[2]})});return r}
 let myLoc=store.get("wr5.myloc",null);
 let data=null,selI=null,fit=null,online=null,editMode=false;
 const MODELS=[["best_match","自动最佳"],["compare","模型对比"],["ecmwf_ifs025","欧洲 ECMWF"],["gfs_seamless","美国 GFS"],["icon_seamless","德国 ICON"]];
@@ -298,7 +310,10 @@ const UNIT={kn:["节",1],ms:["米/秒",0.514444],kmh:["公里/时",1.852]};
 const wv=k=>{if(k==null)return"–";const v=k*UNIT[cfg.unit][1];return cfg.unit==="ms"||v<9.95?f1(v):f0(v)};
 const wu=()=>UNIT[cfg.unit][0];
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
-const sailIcon=`<svg viewBox="0 0 16 20"><path d="M4 2.2C9.5 4.6 13.2 10 12.6 16.4 12.55 16.8 12.2 17 11.8 17H4.8C4.35 17 4 16.65 4 16.2Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1.2" stroke-linejoin="round"/><rect x="1.5" y="18" width="13" height="1.8" rx=".9" fill="var(--accent)"/></svg>`;
+function sailColor(v){if(v==null)return"var(--accent)";const a=Math.max(0,Math.min(1,(cfg.maxSail-v)/Math.max(.1,cfg.maxSail-cfg.minSail)));
+  const S=[[0,[46,214,150]],[.35,[160,214,64]],[.6,[242,200,56]],[.8,[244,140,52]],[1,[232,64,60]]];let i=0;while(i<S.length-2&&a>S[i+1][0])i++;const[p0,c0]=S[i],[p1,c1]=S[i+1];const k=(a-p0)/(p1-p0);return"rgb("+c0.map((x,j)=>Math.round(x+(c1[j]-x)*k)).join(",")+")"}
+// 帆越小（风越大）颜色越红
+function sailSvg(v){const c=sailColor(v);return`<svg viewBox="0 0 18 24" aria-hidden="true"><g transform="rotate(-7 9 12)"><path d="M7.6 1.6C6.7 7 6.7 13.2 7.3 19h7.3c-.2-6.6-2.7-13-7-17.4z" fill="${c}" stroke="${c}" stroke-width="1" stroke-linejoin="round"/><path d="M7.4 9.6h4.9" stroke="var(--bg)" stroke-width="1.1" stroke-linecap="round" opacity=".5"/></g><path d="M2.2 21.4c4.3 1.6 9.3 1.6 13.6 0" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/></svg>`}
 function sameSpot(a,b){return a&&b&&Math.abs(a.lat-b.lat)<1e-3&&Math.abs(a.lon-b.lon)<1e-3}
 function isFav(s){return favs.some(f=>sameSpot(f,s))}
 function dist(a,b){const R=6371,r=Math.PI/180;const dl=(b.lat-a.lat)*r,dn=(b.lon-a.lon)*r;const x=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
@@ -365,7 +380,7 @@ function normalize(raw){
   const mIdx=new Map(M.time.map((t,i)=>[t,i]));
   const pick=(k,i)=>{if(i==null)return null;const a=M[k+"_marine_best_match"]??M[k];const g=M[k+"_ncep_gfswave025"];const v=a?a[i]:null;return v!=null?v:(g?g[i]:null)};
   const hours=H.time.map((t,i)=>{const j=mIdx.get(t);
-    return{t,th:parseT(t),date:t.slice(0,10),hh:+t.slice(11,13),ws:H.wind_speed_10m[i],wg:H.wind_gusts_10m[i],wd:H.wind_direction_10m[i],temp:H.temperature_2m[i],pr:H.precipitation[i],
+    return{t,th:parseT(t),date:t.slice(0,10),hh:+t.slice(11,13),ws:H.wind_speed_10m[i],wg:H.wind_gusts_10m[i],wd:H.wind_direction_10m[i],temp:H.temperature_2m[i],pr:H.precipitation[i],pp:H.precipitation_probability?H.precipitation_probability[i]:null,
       wh:pick("wave_height",j),wdir:pick("wave_direction",j),wp:pick("wave_period",j),sh:pick("swell_wave_height",j),sd:pick("swell_wave_direction",j),sp:pick("swell_wave_period",j),sst:pick("sea_surface_temperature",j)}}).filter(h=>h.ws!=null);
   if(raw.cmp){const ix=new Map(H.time.map((t,i)=>[t,i]));CMP.forEach(([k])=>{const c=raw.cmp[k];if(!c)return;const cm=new Map(c.hourly.time.map((t,i)=>[t,c.hourly.wind_speed_10m[i]]));hours.forEach(h=>{(h.cmp=h.cmp||{})[k]=cm.get(h.t)??null})})}
   const sun={};fc.daily.time.forEach((d,i)=>sun[d]={rise:fc.daily.sunrise[i],set:fc.daily.sunset[i]});
@@ -587,7 +602,7 @@ function renderSpotMap(){
 function roHTML(h){const s=sailFor(h.ws);
   return`<div class="ro"><span class="t">${String(h.hh).padStart(2,"0")}:00</span><span class="k">${h.date===localDateIn(data.tz)?"今天":"周"+WK[wk(h.date)]}</span>
     <span><b style="color:${windColor(h.ws)}">${wv(h.ws)}</b> <span class="k">${wu()} ${dirName(h.wd)}</span></span><span><b>${f1(h.wh)}</b> <span class="k">米 ${f1(h.wp)}秒</span></span>
-    <span class="sail">${s.v?sailIcon+`<b>${s.v}</b><span class="k">m²</span>`:`<span class="k">${s.low?"风太小":"风太大"}</span>`}</span></div>`}
+    <span class="sail">${s.v?sailSvg(s.v)+`<b style="color:${sailColor(s.v)}">${s.v}</b><span class="k">m²</span>`:`<span class="k">${s.low?"风太小":"风太大"}</span>`}</span></div>`}
 function updateOverlay(){if(!data)return;const h=data.hours[selI];if(spotOvl)spotOvl.setIcon(L.divIcon({className:"ovl",html:overlaySVG(h),iconSize:[180,180],iconAnchor:[90,90]}));
   const rb=$("#roBox");if(rb)rb.innerHTML=roHTML(h);else if(!spotMap){const b=$("#spotMapBox");if(b)b.innerHTML=`<div class="compassonly" style="background:var(--deep)">${overlaySVG(h)}</div>${roHTML(h)}`}}
 
@@ -614,18 +629,33 @@ function sheet(){
     return`background:linear-gradient(90deg,${windColor(((p??c)+c)/2)},${windColor(c)} 50%,${windColor(((n??c)+c)/2)})`};
   const rainBar=h=>{if(!h.pr)return"";const p=Math.round(Math.min(1,0.15+h.pr/4)*80);return`background:linear-gradient(to top,rgba(74,166,232,.55) ${p}%,transparent ${p}%)`};
   const L=(a,u)=>`${a}${u?`<small>${u}</small>`:""}`;
-  const rows=[["hr","",h=>String(h.hh).padStart(2,"0")],
-    ["sail",L("建议帆","m²"),h=>{const s=sailFor(h.ws);return s.v?`${s.v}${sailIcon}`:s.high?`<span class="ov">风大</span>`:"–"}],
-    ["",L("风向"),h=>arrow(h.wd)],["c",L("风速",wu()),h=>wv(h.ws),grad(h=>h.ws)],["c",L("阵风",wu()),h=>wv(h.wg),grad(h=>h.wg)],
-    ...(model==="compare"?CMP.map(([k,l])=>["c",L(l,wu()),h=>wv(h.cmp&&h.cmp[k]),grad(h=>h.cmp?h.cmp[k]:null)]):[]),
-    ["s",L("气温","°C"),h=>f0(h.temp)+"°"],["s",L("降水","毫米"),h=>h.pr?f1(h.pr):"0",rainBar],["s",L("水温","°C"),h=>h.sst==null?"–":f0(h.sst)+"°"],
-    ["gap",L("浪向"),h=>h.wdir==null?"–":`<span class="wbox">${arrow(h.wdir,16)}</span>`],["",L("浪高","米"),h=>f1(h.wh)],["s",L("周期","秒"),h=>f1(h.wp)],["s",L("涌浪","米"),h=>f1(h.sh)],["s",L("涌周期","秒"),h=>f1(h.sp)]];
-  if(d.tideX.length)rows.push(["tval",L("潮位","米"),h=>{const m=tideMarks.get(h.th);return(m?`<span class="mk">${m.hi?"▲高":"▼低"} ${fmtHM(m.t)}</span>`:"")+`${h.tide>=0?"+":""}${h.tide.toFixed(1)}`}]);
+  const R={
+    sail:["sail",L("帆","m²"),h=>{const s=sailFor(h.ws);return s.v?`${s.v}${sailSvg(s.v)}`:s.high?`<span class="ov">风大</span>`:"–"}],
+    wd:["",L("风向"),h=>arrow(h.wd,18)],
+    ws:["c",L("风速",wu()),h=>wv(h.ws),grad(h=>h.ws)],
+    wg:["c",L("阵风",wu()),h=>wv(h.wg),grad(h=>h.wg)],
+    temp:["s",L("气温","°C"),h=>f0(h.temp)+"°"],
+    pr:["s",L("降水","毫米"),h=>h.pr?f1(h.pr):"0",rainBar],
+    pp:["s",L("雨概率","%"),h=>h.pp==null?"–":h.pp],
+    sst:["s",L("水温","°C"),h=>h.sst==null?"–":f0(h.sst)+"°"],
+    wdir:["",L("浪向"),h=>h.wdir==null?"–":`<span class="wbox">${arrow(h.wdir,15)}</span>`],
+    wh:["",L("浪高","米"),h=>f1(h.wh)],
+    wp:["s",L("周期","秒"),h=>f1(h.wp)],
+    sh:["s",L("涌浪","米"),h=>f1(h.sh)],
+    sd:["",L("涌向"),h=>arrow(h.sd,16)],
+    sp:["s",L("涌周期","秒"),h=>f1(h.sp)],
+    tide:["tval",L("潮位","米"),h=>{const m=tideMarks.get(h.th);return(m?`<span class="mk">${m.hi?"▲":"▼"}${fmtHM(m.t)}</span>`:"")+`${h.tide>=0?"+":""}${h.tide.toFixed(1)}`}]};
+  const rows=[["hr","",h=>String(h.hh).padStart(2,"0")]];let gapDone=false;
+  rowCfg().forEach(x=>{if(!x.on)return;if(x.k==="tide"&&!d.tideX.length)return;const r=R[x.k].slice();
+    if(["wdir","wh","wp","sh","sd","sp","tide"].includes(x.k)&&!gapDone){gapDone=true;if(rows.length>1)r[0]=(r[0]?r[0]+" ":"")+"gap"}
+    rows.push(r);
+    if(x.k==="wg"&&model==="compare")CMP.forEach(([k,l])=>rows.push(["c",L(l,wu()),h=>wv(h.cmp&&h.cmp[k]),grad(h=>h.cmp?h.cmp[k]:null)]))});
   let s=`<div class="sheetbox"><div class="sheetwrap" id="sheet"><table class="sheet"><tbody><tr class="date"><th class="lab">${cfg.step===1?"逐 1 小时":"逐 3 小时"}</th>`;
   groups.forEach(g=>s+=`<th colspan="${g.n}"><span>周${WK[wk(g.date)]} · ${+g.date.slice(5,7)}月${+g.date.slice(8)}日</span></th>`);s+="</tr>";
   rows.forEach((r,ri)=>{const[c,label,fn,st]=r;
-    s+=`<tr class="${c==="hr"?"hr":""}${c==="gap"?"gap":""}${ri===rows.length-1?" last":""}"><th class="lab">${label}</th>`;
-    hs.forEach((h,i)=>{const cl=[c==="hr"||c==="gap"?"":c];if(i===0||hs[i-1].date!==h.date)cl.push("d0");if(c==="hr"&&isNight(h))cl.push("night");if(h.th===sel.th)cl.push("col");
+    const isGap=/\bgap\b/.test(c),base=c.replace(/\bgap\b/,"").trim();
+    s+=`<tr class="${c==="hr"?"hr":""}${isGap?" gap":""}${ri===rows.length-1?" last":""}"><th class="lab">${label}</th>`;
+    hs.forEach((h,i)=>{const cl=[c==="hr"?"":base];if(i===0||hs[i-1].date!==h.date)cl.push("d0");if(c==="hr"&&isNight(h))cl.push("night");if(h.th===sel.th)cl.push("col");
       const sty=st?st(h,i):"";s+=`<td data-th="${h.th}" class="${cl.join(" ")}"${sty?` style="${sty}"`:""}>${fn(h)}</td>`});s+="</tr>"});
   return s+"</tbody></table></div></div>";
 }
@@ -673,7 +703,13 @@ function setDrawer(){
     <div class="field"><label>我有的帆（可选，用逗号分隔）</label><input id="quiver" type="text" placeholder="例如 4.7, 5.8, 7.0, 8.5" value="${esc(cfg.quiver)}"><div class="hint">填了以后，建议会直接选你手上最接近的那张帆。</div></div>
     <div class="field"><label>风格</label>${seg("style",[["safe","保守"],["std","标准"],["bold","激进"]],cfg.style)}</div>
     <div class="field"><label>风速单位</label>${seg("unit",[["kn","节"],["ms","米/秒"],["kmh","公里/时"]],cfg.unit)}</div>
-    <div class="field"><label>表格时间间隔</label>${seg("step",[[1,"逐 1 小时"],[3,"逐 3 小时"]],cfg.step)}</div>`,()=>{
+    <div class="field"><label>表格时间间隔</label>${seg("step",[[1,"逐 1 小时"],[3,"逐 3 小时"]],cfg.step)}</div>
+    <div class="field"><label style="display:flex;justify-content:space-between;align-items:center">表格显示的项目<button type="button" id="rowReset" style="border:0;background:none;color:var(--accent);font-size:13px">恢复默认</button></label><div class="rowed" id="rowEd"></div><div class="hint">打开或关闭开关来显示、隐藏一行，用箭头调整顺序。</div></div>`,()=>{
+    const ed=()=>{const r=rowCfg();$("#rowEd").innerHTML=r.map((x,i)=>{const n=ROWDEF.find(d=>d[0]===x.k)[1];return`<div class="rrow"><button type="button" class="sw" data-tog="${i}" role="switch" aria-checked="${x.on}" aria-label="${n}"><i></i></button><span>${n}</span><button type="button" class="mv" data-mv="${i}" data-dir="-1" aria-label="上移" ${i===0?"disabled":""}>${I.up}</button><button type="button" class="mv" data-mv="${i}" data-dir="1" aria-label="下移" ${i===r.length-1?"disabled":""}>${I.down}</button></div>`}).join("")};
+    ed();
+    $("#rowEd").onclick=e=>{const r=rowCfg();const tg=e.target.closest("[data-tog]"),mv=e.target.closest("[data-mv]");
+      if(tg){const i=+tg.dataset.tog;r[i].on=!r[i].on}else if(mv){const i=+mv.dataset.mv,j=i+ +mv.dataset.dir;if(j<0||j>=r.length)return;[r[i],r[j]]=[r[j],r[i]]}else return;cfg.rows=r;ed();save()};
+    $("#rowReset").onclick=()=>{delete cfg.rows;ed();save()};
     const num=(id,min,max)=>{const el=$("#"+id);el.addEventListener("change",()=>{let v=parseFloat(el.value);if(!isFinite(v))v=cfg[id];v=Math.max(min,Math.min(max,v));el.value=v;cfg[id]=v;if(id==="weight")cfg.weightSet=true;if(cfg.minSail>cfg.maxSail){[cfg.minSail,cfg.maxSail]=[cfg.maxSail,cfg.minSail]}save()})};
     num("weight",30,150);num("minSail",1,13);num("maxSail",1,13);
     $("#quiver").addEventListener("change",e=>{cfg.quiver=e.target.value;save()});

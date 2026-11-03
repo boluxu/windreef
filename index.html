@@ -566,8 +566,11 @@ function showSpot(){
     <div class="pill"><b id="spName">${esc(cur.name)}</b><button type="button" id="spFav" aria-pressed="${isFav(cur)}" aria-label="收藏">${I.star}</button><button type="button" id="spShare" aria-label="分享">${I.share}</button></div>
     <button class="round" type="button" id="spSet" aria-label="设置">${I.gear}</button></div>
     <div class="spotmap" id="spotMapBox"></div><div id="banner"></div><div id="app"><div class="loading">正在载入预报…</div></div>
-    <div class="foot">风来自所选模型；浪与涌近 10 天用最佳组合模型，之后用 NOAA GFS 海浪模型补到 16 天；潮汐根据 Open-Meteo 海平面数据（含过去 92 天）做调和分析推算，时间误差约半小时，礁石区活动请以 <a href="http://www.bom.gov.au/australia/tides/" target="_blank" rel="noopener">澳大利亚气象局潮汐表</a> 为准。建议帆面积为经验估算。数据：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>（CC BY 4.0）。</div>`;
-  $("#spBack").onclick=back;$("#spSet").onclick=setDrawer;
+    <div class="foot" id="spFoot"></div>`;
+  $("#spBack").onclick=back;
+  {const au=cur.lat<-10&&cur.lon>110&&cur.lon<155;
+   $("#spFoot").innerHTML=cur.lake?`内陆湖：风取湖面所在的格点，没有海浪和潮汐数据。风来自所选模型；建议帆面积为经验估算。数据：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>（CC BY 4.0）。`
+   :`风来自所选模型；浪与涌近 10 天用最佳组合模型，之后用 NOAA GFS 海浪模型补到 16 天；潮汐根据 Open-Meteo 海平面数据（含过去 92 天）做调和分析推算，时间误差约半小时，礁石区活动请以${au?' <a href="http://www.bom.gov.au/australia/tides/" target="_blank" rel="noopener">澳大利亚气象局潮汐表</a> ':"当地海事部门发布的潮汐表"}为准。建议帆面积为经验估算。数据：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>（CC BY 4.0）。`}$("#spSet").onclick=setDrawer;
   $("#spFav").onclick=e=>{toggleFav(cur);e.currentTarget.setAttribute("aria-pressed",isFav(cur))};
   $("#spShare").onclick=async()=>{const url=`${location.origin}${location.pathname}?lat=${cur.lat}&lon=${cur.lon}&name=${encodeURIComponent(cur.name)}#spot`;
     try{if(navigator.share){await navigator.share({title:cur.name+" · windreef",url});return}}catch(e){return}

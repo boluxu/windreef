@@ -618,7 +618,7 @@ function renderSpot(scroll){
   const stops=d.hours.map((x,i)=>`${windColor(x.ws)} ${(i/(d.hours.length-1)*100).toFixed(2)}%`).join(",");
   html+=`<div class="timeline" id="tl"><div class="bar" style="background:linear-gradient(90deg,${stops})"></div><div class="win" id="tlwin"></div></div>
     <div class="tlnote"><span>拖动或点击色条选择时间</span><span>第 8 天以后只看趋势</span></div></div>`;
-  html+=sheet()+tideCard(h.date)+metaCard(h.date);
+  html+=sheet()+`<div id="tideBox" data-day="${h.date}">${tideCard(h.date)}</div>`+metaCard(h.date);
   const pd=$("#days")?.scrollLeft,ps=$("#sheet")?.scrollLeft;
   $("#app").innerHTML=html;updateOverlay();
   if(pd!=null)$("#days").scrollLeft=pd;
@@ -635,6 +635,7 @@ function syncFromScroll(){
   if(w){w.style.left=(fi/N*100).toFixed(2)+"%";w.style.width=Math.min(100,visN*cfg.step/N*100).toFixed(2)+"%"}
   const day=hs[Math.min(hs.length-1,first+Math.floor(visN/3))].date;const ds=$("#days");if(!ds)return;
   let act=null;ds.querySelectorAll("button").forEach(b=>{const on=b.dataset.d===day;b.setAttribute("aria-pressed",on);if(on)act=b});
+  const tb=$("#tideBox");if(tb&&tb.dataset.day!==day){tb.dataset.day=day;tb.innerHTML=tideCard(day)}
   if(act){if(act.offsetLeft<ds.scrollLeft)ds.scrollLeft=act.offsetLeft-4;else if(act.offsetLeft+act.offsetWidth>ds.scrollLeft+ds.clientWidth)ds.scrollLeft=act.offsetLeft+act.offsetWidth-ds.clientWidth+4}
 }
 function sheet(){

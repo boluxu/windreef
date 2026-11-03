@@ -566,10 +566,15 @@ function showSpot(){
   data=null;loadSpot();
 }
 const CMP=[["ecmwf_ifs025","ECMWF"],["gfs_seamless","GFS"],["icon_seamless","ICON"]];
+const seaCache={};
 async function fetchRaw(s,m){
   const base=m==="compare"?"best_match":m;const u=urls(s,base);
-  try{const[fc,mr,td]=await Promise.all([getJSON(u.fc),s.lake?null:getJSON(u.mr),s.lake?null:getJSON(u.td).catch(()=>null)]);
-    let cmp=null;if(m==="compare"){cmp={};await Promise.all(CMP.map(async([k])=>{try{cmp[k]=await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m&forecast_days=16&wind_speed_unit=kn&timezone=auto&models=${k}&cell_selection=${s.lake?"nearest":"sea"}`)}catch(e){}}))}
+  // 海浪和潮汐与风的模型无关：同一地点 30 分钟内只下载一次，切换模型时只重新取风
+  const key=s.lat.toFixed(3)+","+s.lon.toFixed(3),mc=seaCache[key],fresh=mc&&Date.now()-mc.ts<30*60e3;
+  const cmpP=m==="compare"?Promise.all(CMP.map(async([k])=>{try{return[k,await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m&forecast_days=16&wind_speed_unit=kn&timezone=auto&models=${k}&cell_selection=${s.lake?"nearest":"sea"}`)]}catch(e){return[k,null]}})):null;
+  try{const[fc,mr,td]=await Promise.all([getJSON(u.fc),s.lake?null:fresh?mc.mr:getJSON(u.mr),s.lake?null:fresh?mc.td:getJSON(u.td).catch(()=>null)]);
+    if(!s.lake)seaCache[key]={mr,td,ts:fresh?mc.ts:Date.now()};
+    let cmp=null;if(cmpP){cmp=Object.fromEntries(await cmpP)}
     online=true;return{raw:{fc,mr,td,cmp},mode:"live"}}
   catch(e){if(online==null)online=false}
   if(SNAPSHOT&&sameSpot(SNAPSHOT.spot,s)){const cmp=m==="compare"?Object.fromEntries(CMP.map(([k])=>[k,SNAPSHOT.fc[k]])):null;
@@ -748,7 +753,8 @@ function setDrawer(){
 /* ---------- spot page events ---------- */
 document.addEventListener("click",e=>{
   if($("#vSpot").hidden||!data)return;
-  const m=e.target.closest("#app [data-m]");if(m){if(m.dataset.m!==model){model=m.dataset.m;store.set("wr5.model",model);const th=data.hours[selI].th;
+  const m=e.target.closest("#app [data-m]");if(m){if(m.dataset.m!==model){model=m.dataset.m;store.set("wr5.model",model);
+    document.querySelectorAll("#app [data-m]").forEach(b=>b.setAttribute("aria-pressed",b===m));const sw=$("#sheet");if(sw)sw.style.opacity=".45";toast(model==="compare"?"正在载入三个模型…":"正在载入…");const th=data.hours[selI].th;
     const seq=++loadSeq;fetchRaw(cur,model)
       .then(({raw})=>{if(!raw||seq!==loadSeq)return;data=normalize(raw);const i=data.hours.findIndex(h=>h.th===th);selI=i<0?0:i;renderSpot(true)})}return}
   const dbtn=e.target.closest("#days [data-d]");if(dbtn){const dt=dbtn.dataset.d;const n=nowTh(data.tz);let i=data.hours.findIndex(h=>h.date===dt&&h.hh===12);if(dt===localDateIn(data.tz)){const j=data.hours.findIndex(h=>h.th>=n-0.5);if(j>=0)i=j}if(i<0)i=data.hours.findIndex(h=>h.date===dt);select(i,"day");return}

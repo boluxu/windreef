@@ -122,7 +122,7 @@ h2.sec button{border:0;background:none;color:var(--accent);font-size:15px;font-w
 .daytabs button.far .n{opacity:.7}
 .timeline{position:relative;height:22px;margin:4px 6px 0;cursor:pointer;touch-action:pan-y}
 .timeline .bar{position:absolute;inset:6px 0;border-radius:6px}
-.timeline .win{position:absolute;top:2px;bottom:2px;border:3px solid #fff;border-radius:9px;background:rgba(255,255,255,.25);pointer-events:none;min-width:22px;transform:translateX(-50%)}
+.timeline .win{position:absolute;top:2px;bottom:2px;border:3px solid #fff;border-radius:9px;background:rgba(255,255,255,.25);pointer-events:none;min-width:22px;box-sizing:border-box;transition:left .08s linear}
 .tlnote{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin:2px 6px 0}
 .sheetbox{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-left:calc(-1 * max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(16px,env(safe-area-inset-right,0px)))}
 .sheetwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
@@ -616,11 +616,26 @@ function renderSpot(scroll){
   let html=`<div class="models" role="group" aria-label="风的预报模型">${MODELS.map(([k,l])=>`<button type="button" data-m="${k}" aria-pressed="${k===model}">${l}</button>`).join("")}</div>`;
   html+=`<div><div class="daytabs" id="days">${d.dates.map((dt,i)=>{const w=wk(dt);return`<button type="button" data-d="${dt}" class="${w===0||w===6?"we":""}${i>=7?" far":""}" aria-pressed="${dt===h.date}"><span class="w">${dt===today?"今天":"周"+WK[w]}</span><span class="n">${dt.slice(8)}</span></button>`}).join("")}</div>`;
   const stops=d.hours.map((x,i)=>`${windColor(x.ws)} ${(i/(d.hours.length-1)*100).toFixed(2)}%`).join(",");
-  html+=`<div class="timeline" id="tl"><div class="bar" style="background:linear-gradient(90deg,${stops})"></div><div class="win" style="left:${(selI/(d.hours.length-1)*100).toFixed(2)}%;width:${Math.max(22,100/d.hours.length*24)}px"></div></div>
+  html+=`<div class="timeline" id="tl"><div class="bar" style="background:linear-gradient(90deg,${stops})"></div><div class="win" id="tlwin"></div></div>
     <div class="tlnote"><span>拖动或点击色条选择时间</span><span>第 8 天以后只看趋势</span></div></div>`;
   html+=sheet()+tideCard(h.date)+metaCard(h.date);
+  const pd=$("#days")?.scrollLeft,ps=$("#sheet")?.scrollLeft;
   $("#app").innerHTML=html;updateOverlay();
-  if(scroll)scrollToSel();
+  if(pd!=null)$("#days").scrollLeft=pd;
+  const wrap=$("#sheet");if(ps!=null)wrap.scrollLeft=ps;
+  let raf=0;wrap.addEventListener("scroll",()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(syncFromScroll)},{passive:true});
+  if(scroll)scrollToSel(scroll===true?"center":scroll);else syncFromScroll();
+}
+// 表格横向滚动时：日期条高亮当前看到的那一天，色条上的白框标出当前看到的时间范围（和 Windy 一样联动）
+function syncFromScroll(){
+  const wrap=$("#sheet"),hr=wrap&&wrap.querySelector("tr.hr");if(!hr||hr.cells.length<2)return;
+  const lab=hr.cells[0].offsetWidth,colW=hr.cells[1].offsetWidth,hs=shownHours(),N=data.hours.length;
+  const first=Math.max(0,Math.min(hs.length-1,Math.floor((wrap.scrollLeft+2)/colW))),visN=Math.max(1,(wrap.clientWidth-lab)/colW);
+  const fi=data.hours.indexOf(hs[first]);const w=$("#tlwin");
+  if(w){w.style.left=(fi/N*100).toFixed(2)+"%";w.style.width=Math.min(100,visN*cfg.step/N*100).toFixed(2)+"%"}
+  const day=hs[Math.min(hs.length-1,first+Math.floor(visN/3))].date;const ds=$("#days");if(!ds)return;
+  let act=null;ds.querySelectorAll("button").forEach(b=>{const on=b.dataset.d===day;b.setAttribute("aria-pressed",on);if(on)act=b});
+  if(act){if(act.offsetLeft<ds.scrollLeft)ds.scrollLeft=act.offsetLeft-4;else if(act.offsetLeft+act.offsetWidth>ds.scrollLeft+ds.clientWidth)ds.scrollLeft=act.offsetLeft+act.offsetWidth-ds.clientWidth+4}
 }
 function sheet(){
   const d=data,hs=shownHours(),sel=d.hours[selI];
@@ -690,9 +705,13 @@ function metaCard(day){
   <div class="legend">${[0,4,8,11,15,18,22,26,31,40].map(k=>`<i style="background:${windColor(k)}"></i>`).join("")}</div>
   <div class="legendlab"><span>0</span><span>8</span><span>15</span><span>22</span><span>31</span><span>40+ 节</span></div></div></div>`;
 }
-function scrollToSel(){const wrap=$("#sheet");const td=wrap&&wrap.querySelector("td.col");if(td)wrap.scrollLeft=Math.max(0,td.offsetLeft-62-td.offsetWidth*1.5);
-  const b=document.querySelector(`#days button[aria-pressed="true"]`),ds=$("#days");if(b&&ds)ds.scrollLeft=Math.max(0,b.offsetLeft-ds.clientWidth/2+b.clientWidth/2)}
-function select(i,scroll){selI=Math.max(0,Math.min(data.hours.length-1,i));const sx=$("#sheet")?.scrollLeft;renderSpot(false);if(scroll)scrollToSel();else if(sx!=null)$("#sheet").scrollLeft=sx}
+function scrollToSel(mode){const wrap=$("#sheet");if(!wrap)return;const hr=wrap.querySelector("tr.hr");const lab=hr?hr.cells[0].offsetWidth:56;
+  if(mode==="day"){const day=data.hours[selI].date;const td=[...hr.cells].find(c=>c.dataset.th&&dayKey(+c.dataset.th)===day);if(td){const L=Math.max(0,td.offsetLeft-lab);wrap.scrollTo({left:L,behavior:Math.abs(L-wrap.scrollLeft)<1500?"smooth":"auto"})}return}
+  const td=wrap.querySelector("td.col");if(!td)return;
+  if(mode==="center")wrap.scrollLeft=Math.max(0,td.offsetLeft-lab-(wrap.clientWidth-lab)/2+td.offsetWidth/2);
+  else{const l=td.offsetLeft-lab,r=td.offsetLeft+td.offsetWidth;if(l<wrap.scrollLeft)wrap.scrollLeft=l;else if(r>wrap.scrollLeft+wrap.clientWidth)wrap.scrollLeft=r-wrap.clientWidth}
+  syncFromScroll()}
+function select(i,mode){selI=Math.max(0,Math.min(data.hours.length-1,i));renderSpot(mode||false)}
 
 /* ---------- settings drawer ---------- */
 function openDrawer(html,onMount){$("#layer").innerHTML=`<div class="scrim" id="scrim"><div class="drawer" role="dialog" aria-modal="true">${html}</div></div>`;
@@ -727,13 +746,13 @@ document.addEventListener("click",e=>{
   const m=e.target.closest("#app [data-m]");if(m){if(m.dataset.m!==model){model=m.dataset.m;store.set("wr5.model",model);const th=data.hours[selI].th;
     const seq=++loadSeq;fetchRaw(cur,model)
       .then(({raw})=>{if(!raw||seq!==loadSeq)return;data=normalize(raw);const i=data.hours.findIndex(h=>h.th===th);selI=i<0?0:i;renderSpot(true)})}return}
-  const dbtn=e.target.closest("#days [data-d]");if(dbtn){const dt=dbtn.dataset.d;const n=nowTh(data.tz);let i=data.hours.findIndex(h=>h.date===dt&&h.hh===12);if(dt===localDateIn(data.tz)){const j=data.hours.findIndex(h=>h.th>=n-0.5);if(j>=0)i=j}if(i<0)i=data.hours.findIndex(h=>h.date===dt);select(i,true);return}
-  const td=e.target.closest("#sheet td[data-th]");if(td){select(data.hours.findIndex(h=>h.th===+td.dataset.th),false);return}
+  const dbtn=e.target.closest("#days [data-d]");if(dbtn){const dt=dbtn.dataset.d;const n=nowTh(data.tz);let i=data.hours.findIndex(h=>h.date===dt&&h.hh===12);if(dt===localDateIn(data.tz)){const j=data.hours.findIndex(h=>h.th>=n-0.5);if(j>=0)i=j}if(i<0)i=data.hours.findIndex(h=>h.date===dt);select(i,"day");return}
+  const td=e.target.closest("#sheet td[data-th]");if(td){select(data.hours.findIndex(h=>h.th===+td.dataset.th),"nearest");return}
 });
 // 只跟踪在色条上按下的那一根手指；iOS 滚动时会发 pointercancel，必须一起结束拖动，
 // 否则下一次点别处时会被当成还在拖色条（之前点日期会跳到别的日子就是这个原因）
 let dragId=null;
-function tlPick(e){const tl=$("#tl");if(!tl)return;const r=tl.getBoundingClientRect();const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));select(Math.round(p*(data.hours.length-1)),true)}
+function tlPick(e){const tl=$("#tl");if(!tl)return;const r=tl.getBoundingClientRect();const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));select(Math.round(p*(data.hours.length-1)),"center")}
 document.addEventListener("pointerdown",e=>{dragId=null;if(e.target.closest&&e.target.closest("#tl")&&data){dragId=e.pointerId;tlPick(e)}});
 window.addEventListener("pointermove",e=>{if(dragId!==null&&e.pointerId===dragId&&(e.pointerType!=="mouse"||e.buttons))tlPick(e)});
 ["pointerup","pointercancel","blur"].forEach(ev=>window.addEventListener(ev,()=>{dragId=null}));

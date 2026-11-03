@@ -126,32 +126,33 @@ h2.sec button{border:0;background:none;color:var(--accent);font-size:15px;font-w
 .tlnote{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin:2px 6px 0}
 .sheetbox{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-left:calc(-1 * max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(16px,env(safe-area-inset-right,0px)))}
 .sheetwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
-table.sheet{border-collapse:separate;border-spacing:0;font-family:var(--display);font-variant-numeric:tabular-nums}
+.sheetwrap{background:var(--bg)}
+table.sheet{border-collapse:separate;border-spacing:0;font-family:var(--body);font-variant-numeric:tabular-nums lining-nums}
 .sheet th,.sheet td{padding:0;text-align:center;white-space:nowrap}
-.sheet td{min-width:46px;height:40px;font-size:19px;font-weight:600;cursor:pointer}
-.sheet th.lab{position:sticky;left:0;z-index:3;background:var(--bg);font-family:var(--body);font-size:12px;font-weight:600;color:var(--muted);text-align:center;width:62px;min-width:62px;max-width:62px;border-right:1px solid var(--line);line-height:1.15;padding:0 4px;white-space:normal}
-.sheet tr.date th{font-family:var(--body);font-size:14px;font-weight:600;color:var(--muted);text-align:left;padding:10px 0 4px;letter-spacing:.06em}
+.sheet td{min-width:48px;height:38px;font-size:17px;font-weight:500;cursor:pointer;color:var(--ink)}
+.sheet th.lab{position:sticky;left:0;z-index:3;background:var(--bg);font-size:13px;font-weight:500;color:#cfdde3;text-align:right;width:92px;min-width:92px;max-width:92px;border-right:1px solid var(--line);padding:0 10px 0 4px;white-space:nowrap;box-shadow:6px 0 8px -6px rgba(0,0,0,.35)}
+.sheet th.lab small{color:var(--dim);font-size:12px;font-weight:400;margin-left:3px}
+.sheet tr.date th{font-size:13px;font-weight:600;color:var(--muted);text-align:left;padding:12px 0 6px;letter-spacing:.08em}
 .sheet tr.date th:not(.lab){border-left:1px solid var(--line)}
-.sheet tr.date th span{position:sticky;left:74px;padding-left:8px}
-.sheet tr.hr td{font-size:20px;font-weight:700;height:40px}
-.sheet td.night{background-color:var(--night)}
-.sheet tr.hr td.night{background:#132a36}
+.sheet tr.date th span{position:sticky;left:104px;padding-left:10px}
+.sheet tr.hr td{font-size:17px;font-weight:700;height:40px;background:var(--panel)}
+.sheet tr.hr td.night{background:#16303d;color:#dfe9ee}
 .sheet td.d0{border-left:1px solid var(--line)}
 .sheet td.col{box-shadow:inset 0 0 0 999px var(--colsel)}
-.sheet tr.hr td.col{background:#5f7f8e;border-radius:12px 12px 0 0}
+.sheet tr.hr td.col{background:#6f8e9c;border-radius:12px 12px 0 0;box-shadow:none}
 .sheet tr.last td.col{border-radius:0 0 12px 12px}
-.sheet td.c{color:var(--cellink)}
-.sheet td.s{font-size:16px;font-weight:500;color:var(--muted)}
-.sheet td.sail{font-size:14px;line-height:1}
-.sheet td.sail svg{display:block;margin:2px auto 0;width:16px;height:20px}
+.sheet td.c{color:var(--cellink);font-weight:600;height:40px}
+.sheet td.s{color:#dbe6ea}
+.sheet tr.gap>*{border-top:1px solid var(--line)}
+.sheet tr.gap td,.sheet tr.gap th{height:46px}
+.sheet td.sail{font-size:13px;line-height:1;height:46px}
+.sheet td.sail svg{display:block;margin:3px auto 0;width:16px;height:20px}
 .sheet td.sail .ov{color:var(--red)}
 .arr{display:inline-block;width:20px;height:20px;vertical-align:middle}
 .arr svg{display:block}
-.wbox{display:inline-grid;place-items:center;width:34px;height:26px;background:var(--wavebox);color:#fff;border-radius:9px}
-.sheet tr.sec th{font-size:11px;letter-spacing:.06em;color:var(--dim);text-align:center;padding:8px 2px 2px;font-weight:600}
-.sheet tr.sec td{height:6px;cursor:default}
-.mk{display:block;font-size:11px;line-height:1;color:var(--tide);font-weight:600}
-.tval{font-size:15px}
+.wbox{display:inline-grid;place-items:center;width:40px;height:26px;background:var(--wavebox);color:#fff;border-radius:7px}
+.mk{display:block;font-size:11px;line-height:1;color:var(--tide);font-weight:600;margin-bottom:2px}
+.tval{font-size:16px}
 .card{background:var(--deep);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .card h2{margin:0;font-size:15px;font-weight:600;color:var(--muted);letter-spacing:.04em}
 .card h2 b{color:var(--ink)}
@@ -294,7 +295,7 @@ const dirName=d=>d==null?"":CARD[Math.round(d/22.5)%16];
 const f1=v=>v==null?"–":(Math.round(v*10)/10).toFixed(1);
 const f0=v=>v==null?"–":String(Math.round(v));
 const UNIT={kn:["节",1],ms:["米/秒",0.514444],kmh:["公里/时",1.852]};
-const wv=k=>{if(k==null)return"–";const v=k*UNIT[cfg.unit][1];return cfg.unit==="ms"?f1(v):f0(v)};
+const wv=k=>{if(k==null)return"–";const v=k*UNIT[cfg.unit][1];return cfg.unit==="ms"||v<9.95?f1(v):f0(v)};
 const wu=()=>UNIT[cfg.unit][0];
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 const sailIcon=`<svg viewBox="0 0 16 20"><path d="M4 2.2C9.5 4.6 13.2 10 12.6 16.4 12.55 16.8 12.2 17 11.8 17H4.8C4.35 17 4 16.65 4 16.2Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1.2" stroke-linejoin="round"/><rect x="1.5" y="18" width="13" height="1.8" rx=".9" fill="var(--accent)"/></svg>`;
@@ -608,20 +609,24 @@ function sheet(){
   const groups=[];hs.forEach(h=>{const g=groups[groups.length-1];if(g&&g.date===h.date)g.n++;else groups.push({date:h.date,n:1})});
   const isNight=h=>{const s=d.sun[h.date];if(!s)return false;return h.hh<+s.rise.slice(11,13)||h.hh>+s.set.slice(11,13)};
   const tideMarks=new Map();d.tideX.forEach(x=>{const k=Math.round(x.t/cfg.step)*cfg.step;tideMarks.set(k,x)});
-  const cls=(h,i,extra)=>{const c=[extra||""];if(i===0||hs[i-1].date!==h.date)c.push("d0");if(isNight(h))c.push("night");if(h.th===sel.th)c.push("col");return c.join(" ")};
+  // 相邻格子颜色渐变过渡，读起来像连续的风场
+  const grad=get=>(h,i)=>{const c=get(h);if(c==null)return"";const p=i>0?get(hs[i-1]):c,n=i<hs.length-1?get(hs[i+1]):c;
+    return`background:linear-gradient(90deg,${windColor(((p??c)+c)/2)},${windColor(c)} 50%,${windColor(((n??c)+c)/2)})`};
+  const rainBar=h=>{if(!h.pr)return"";const p=Math.round(Math.min(1,0.15+h.pr/4)*80);return`background:linear-gradient(to top,rgba(74,166,232,.55) ${p}%,transparent ${p}%)`};
+  const L=(a,u)=>`${a}${u?`<small>${u}</small>`:""}`;
   const rows=[["hr","",h=>String(h.hh).padStart(2,"0")],
-    ["sail","建议帆<br>m²",h=>{const s=sailFor(h.ws);return s.v?`${s.v}${sailIcon}`:s.high?`<span class="ov">风大</span>`:"–"}],
-    ["","风向",h=>arrow(h.wd)],["c","风速<br>"+wu(),h=>wv(h.ws),h=>`background:${windColor(h.ws)}`],["c","阵风<br>"+wu(),h=>wv(h.wg),h=>`background:${windColor(h.wg)}`],
-    ...(model==="compare"?[["sec","各模型风速"],...CMP.map(([k,l])=>["c",l+"<br>"+wu(),h=>wv(h.cmp&&h.cmp[k]),h=>`background:${windColor(h.cmp&&h.cmp[k])}`])]:[]),
-    ["s","气温<br>°C",h=>f0(h.temp)+"°"],["s","降水<br>毫米",h=>h.pr?f1(h.pr):"0"],["s","水温<br>°C",h=>h.sst==null?"–":f0(h.sst)+"°"],
-    ["sec","海浪"],["","浪向",h=>h.wdir==null?"–":`<span class="wbox">${arrow(h.wdir,16)}</span>`],["","浪高<br>米",h=>f1(h.wh)],["s","周期<br>秒",h=>f1(h.wp)],["s","涌浪<br>米",h=>f1(h.sh)],["s","涌周期<br>秒",h=>f1(h.sp)]];
-  if(d.tideX.length)rows.push(["tval","潮位<br>米",h=>{const m=tideMarks.get(h.th);return(m?`<span class="mk">${m.hi?"▲高":"▼低"} ${fmtHM(m.t)}</span>`:"")+`${h.tide>=0?"+":""}${h.tide.toFixed(1)}`}]);
-  let s=`<div class="sheetbox"><div class="sheetwrap" id="sheet"><table class="sheet"><tbody><tr class="date"><th class="lab">${cfg.step===1?"逐时":"3 小时"}</th>`;
-  groups.forEach(g=>s+=`<th colspan="${g.n}"><span>周${WK[wk(g.date)]}，${+g.date.slice(5,7)}月${+g.date.slice(8)}日</span></th>`);s+="</tr>";
+    ["sail",L("建议帆","m²"),h=>{const s=sailFor(h.ws);return s.v?`${s.v}${sailIcon}`:s.high?`<span class="ov">风大</span>`:"–"}],
+    ["",L("风向"),h=>arrow(h.wd)],["c",L("风速",wu()),h=>wv(h.ws),grad(h=>h.ws)],["c",L("阵风",wu()),h=>wv(h.wg),grad(h=>h.wg)],
+    ...(model==="compare"?CMP.map(([k,l])=>["c",L(l,wu()),h=>wv(h.cmp&&h.cmp[k]),grad(h=>h.cmp?h.cmp[k]:null)]):[]),
+    ["s",L("气温","°C"),h=>f0(h.temp)+"°"],["s",L("降水","毫米"),h=>h.pr?f1(h.pr):"0",rainBar],["s",L("水温","°C"),h=>h.sst==null?"–":f0(h.sst)+"°"],
+    ["gap",L("浪向"),h=>h.wdir==null?"–":`<span class="wbox">${arrow(h.wdir,16)}</span>`],["",L("浪高","米"),h=>f1(h.wh)],["s",L("周期","秒"),h=>f1(h.wp)],["s",L("涌浪","米"),h=>f1(h.sh)],["s",L("涌周期","秒"),h=>f1(h.sp)]];
+  if(d.tideX.length)rows.push(["tval",L("潮位","米"),h=>{const m=tideMarks.get(h.th);return(m?`<span class="mk">${m.hi?"▲高":"▼低"} ${fmtHM(m.t)}</span>`:"")+`${h.tide>=0?"+":""}${h.tide.toFixed(1)}`}]);
+  let s=`<div class="sheetbox"><div class="sheetwrap" id="sheet"><table class="sheet"><tbody><tr class="date"><th class="lab">${cfg.step===1?"逐 1 小时":"逐 3 小时"}</th>`;
+  groups.forEach(g=>s+=`<th colspan="${g.n}"><span>周${WK[wk(g.date)]} · ${+g.date.slice(5,7)}月${+g.date.slice(8)}日</span></th>`);s+="</tr>";
   rows.forEach((r,ri)=>{const[c,label,fn,st]=r;
-    if(c==="sec"){s+=`<tr class="sec"><th class="lab">${label}</th><td colspan="${hs.length}"></td></tr>`;return}
-    s+=`<tr class="${c==="hr"?"hr":""}${ri===rows.length-1?" last":""}"><th class="lab">${label}</th>`;
-    hs.forEach((h,i)=>{s+=`<td data-th="${h.th}" class="${cls(h,i,c==="hr"?"":c)}"${st?` style="${st(h)}"`:""}>${fn(h)}</td>`});s+="</tr>"});
+    s+=`<tr class="${c==="hr"?"hr":""}${c==="gap"?"gap":""}${ri===rows.length-1?" last":""}"><th class="lab">${label}</th>`;
+    hs.forEach((h,i)=>{const cl=[c==="hr"||c==="gap"?"":c];if(i===0||hs[i-1].date!==h.date)cl.push("d0");if(c==="hr"&&isNight(h))cl.push("night");if(h.th===sel.th)cl.push("col");
+      const sty=st?st(h,i):"";s+=`<td data-th="${h.th}" class="${cl.join(" ")}"${sty?` style="${sty}"`:""}>${fn(h)}</td>`});s+="</tr>"});
   return s+"</tbody></table></div></div>";
 }
 function tideCard(day){

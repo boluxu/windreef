@@ -730,11 +730,14 @@ document.addEventListener("click",e=>{
   const dbtn=e.target.closest("#days [data-d]");if(dbtn){const dt=dbtn.dataset.d;const n=nowTh(data.tz);let i=data.hours.findIndex(h=>h.date===dt&&h.hh===12);if(dt===localDateIn(data.tz)){const j=data.hours.findIndex(h=>h.th>=n-0.5);if(j>=0)i=j}if(i<0)i=data.hours.findIndex(h=>h.date===dt);select(i,true);return}
   const td=e.target.closest("#sheet td[data-th]");if(td){select(data.hours.findIndex(h=>h.th===+td.dataset.th),false);return}
 });
-let dragging=false;
+// 只跟踪在色条上按下的那一根手指；iOS 滚动时会发 pointercancel，必须一起结束拖动，
+// 否则下一次点别处时会被当成还在拖色条（之前点日期会跳到别的日子就是这个原因）
+let dragId=null;
 function tlPick(e){const tl=$("#tl");if(!tl)return;const r=tl.getBoundingClientRect();const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));select(Math.round(p*(data.hours.length-1)),true)}
-document.addEventListener("pointerdown",e=>{if(e.target.closest("#tl")&&data){dragging=true;tlPick(e)}});
-window.addEventListener("pointermove",e=>{if(dragging)tlPick(e)});
-window.addEventListener("pointerup",()=>dragging=false);
+document.addEventListener("pointerdown",e=>{dragId=null;if(e.target.closest&&e.target.closest("#tl")&&data){dragId=e.pointerId;tlPick(e)}});
+window.addEventListener("pointermove",e=>{if(dragId!==null&&e.pointerId===dragId&&(e.pointerType!=="mouse"||e.buttons))tlPick(e)});
+["pointerup","pointercancel","blur"].forEach(ev=>window.addEventListener(ev,()=>{dragId=null}));
+document.addEventListener("visibilitychange",()=>{dragId=null});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer()});
 
 /* ---------- start ---------- */

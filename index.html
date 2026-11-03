@@ -434,7 +434,7 @@ function showHome(){
     <div class="foot">数据来源：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>（CC BY 4.0）。地图：© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 贡献者。</div>`;
   $("#hMenu").onclick=setDrawer;$("#hSearch").onclick=()=>go("search");$("#hMap").onclick=()=>go("pick");
   $("#hEdit").onclick=()=>{editMode=!editMode;$("#hEdit").textContent=editMode?"完成":"编辑";renderFavs()};
-  renderMyCard();renderFavs();renderHomeMap();
+  renderMyCard();renderFavs();renderHomeMap();setTimeout(prefetchFavs,1500);
 }
 function stripHTML(m){
   const days=m.days.map(d=>d.date);const segs=days.map(d=>{const idx=m.time.map((t,i)=>t.startsWith(d)?i:-1).filter(i=>i>=0);
@@ -473,6 +473,11 @@ function renderFavs(){
 const TILE="https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const ATTR='© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 function mapOK(){return HAS_L&&online!==false}
+let prefetching=false;
+async function prefetchFavs(){if(prefetching||online===false)return;prefetching=true;
+  try{for(const s of favs.slice(0,8)){if($("#vHome").hidden)break;const key=spotKey(s);
+    try{await cached(`wr5.c.w.${key}.${model}`,30*60e3,()=>fetchWind(s,model));if(!s.lake){await cached(`wr5.c.s.${key}`,30*60e3,()=>getJSON(urls(s,"best_match").mr));await getTide(s)}}catch(e){}
+    await new Promise(r=>setTimeout(r,300))}}finally{prefetching=false}}
 function renderHomeMap(){
   const box=$("#homeMapBox");if(!box)return;
   if(homeMap){homeMap.remove();homeMap=null}
@@ -582,6 +587,12 @@ async function fetchWind(s,m){
   const cmpP=m==="compare"?Promise.all(CMP.map(async([k])=>{try{return[k,await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m&forecast_days=16&wind_speed_unit=kn&timezone=auto&models=${k}&cell_selection=${s.lake?"nearest":"sea"}`)]}catch(e){return[k,null]}})):null;
   const fc=await getJSON(urls(s,base).fc);return{fc,cmp:cmpP?Object.fromEntries(await cmpP):null}}
 async function fetchTide(s){return tideCoef(await getJSON(urls(s,"best_match").td))}
+// 潮汐：缓存一周；失败自动重试一次，再失败就在潮汐卡片里显示原因和“重试”按钮
+const tideSt={};const tideInflight={};
+async function getTide(s){const key=spotKey(s),tK=`wr5.c.t.${key}`;
+  const c=cGet(tK);if(c&&c.v&&Date.now()-c.ts<7*864e5){tideSt[key]={st:"ok"};return c.v}
+  if(!tideInflight[key])tideInflight[key]=(async()=>{let err;for(let a=0;a<2;a++){try{const v=await fetchTide(s);if(v)cSet(tK,v);return v}catch(e){err=e;await new Promise(r=>setTimeout(r,1500))}}throw err})().finally(()=>{delete tideInflight[key]});
+  try{const v=await tideInflight[key];tideSt[key]={st:v?"ok":"none"};return v}catch(e){tideSt[key]={st:"error",err:String(e&&e.message||e)};return null}}
 function showData(parts,mode){
   const prevTh=data&&data.hours[selI]?data.hours[selI].th:null,first=!data;
   data=normalize(parts);data.mode=mode;
@@ -594,7 +605,7 @@ async function loadSpot(){
   const wK=`wr5.c.w.${key}.${m}`,sK=`wr5.c.s.${key}`,tK=`wr5.c.t.${key}`;
   const cw=cGet(wK),cs=cGet(sK),ct=cGet(tK);let shown=false;
   if(cw&&Date.now()-cw.ts<12*3600e3){showData({fc:cw.v.fc,cmp:cw.v.cmp,mr:cs&&cs.v,tc:ct&&ct.v},"cache");shown=true}
-  const tideP=s.lake?Promise.resolve(null):cached(tK,7*864e5,()=>fetchTide(s)).catch(()=>null);
+  tideSt[key]={st:"loading"};const tideP=s.lake?Promise.resolve(null):getTide(s);
   let w=null,sea=null;
   try{[w,sea]=await Promise.all([cached(wK,30*60e3,()=>fetchWind(s,m)),s.lake?null:cached(sK,30*60e3,()=>getJSON(urls(s,"best_match").mr))]);online=true}catch(e){if(online==null)online=false}
   if(seq!==loadSeq)return;
@@ -604,7 +615,7 @@ async function loadSpot(){
     if(SNAPSHOT&&sameSpot(SNAPSHOT.spot,s)){const base=m==="compare"?"best_match":m;showData({fc:SNAPSHOT.fc[base]||SNAPSHOT.fc.best_match,mr:SNAPSHOT.mr,tc:tideCoef(SNAPSHOT.td),cmp:m==="compare"?Object.fromEntries(CMP.map(([k])=>[k,SNAPSHOT.fc[k]])):null,fetched:SNAPSHOT.fetched},"snap");return}
     $("#app").innerHTML=`<div class="banner"><b>载入失败</b>。${online===false?"当前环境不能联网，只有 Long Reef 有离线数据。放到 GitHub Pages 上即可查看任何地点。":"请检查网络后重试。"}</div>`;renderSpotMap();return}
   const tc=await tideP;if(seq!==loadSeq||!data)return;
-  if(tc&&!data.tc){applyTide(data,tc);renderSpot(false)}
+  if(tc&&!data.tc){applyTide(data,tc);renderSpot(false)}else if(!data.tc){const tb=$("#tideBox");if(tb)tb.innerHTML=tideCard(tb.dataset.day)}
 }
 function overlaySVG(h){
   const C=90,R=56;
@@ -704,7 +715,11 @@ function sheet(){
   return s+"</tbody></table></div></div>";
 }
 function tideCard(day){
-  if(!fit&&cur.lake)return"";if(!fit)return`<div class="card"><h2>潮汐</h2><div class="note">这个地点没有可用的海平面数据，无法推算潮汐。</div></div>`;
+  if(!fit&&cur.lake)return"";
+  if(!fit){const ts=tideSt[spotKey(cur)]||{st:"loading"},st=ts.st;
+    if(st==="loading")return`<div class="card"><h2>潮汐</h2><div class="note">正在推算潮汐，第一次打开这个地点需要几秒钟…</div></div>`;
+    if(st==="error")return`<div class="card"><h2>潮汐</h2><div class="note">潮汐数据暂时没有载入（${esc(ts.err)}）。</div><button type="button" class="btn ghost" id="tideRetry" style="align-self:flex-start">重试</button></div>`;
+    return`<div class="card"><h2>潮汐</h2><div class="note">这个地点没有可用的海平面数据，无法推算潮汐。</div></div>`}
   const ex=data.tideX.filter(x=>dayKey(x.t)===day);
   return`<div class="card"><h2>潮汐 · <b>周${WK[wk(day)]} ${+day.slice(5,7)}月${+day.slice(8)}日</b></h2>${tideSVG(day)}
     <div class="tidelist">${ex.map(x=>`<div class="tl"><span class="k">${x.hi?"高潮":"低潮"}</span><span class="v">${fmtHM(x.t)}</span><span class="h">${x.h>=0?"+":""}${x.h.toFixed(2)} 米</span></div>`).join("")}</div>
@@ -771,6 +786,7 @@ function setDrawer(){
 /* ---------- spot page events ---------- */
 document.addEventListener("click",e=>{
   if($("#vSpot").hidden||!data)return;
+  if(e.target.closest("#tideRetry")){tideSt[spotKey(cur)]={st:"loading"};const tb=$("#tideBox");if(tb)tb.innerHTML=tideCard(tb.dataset.day);const seq=loadSeq;getTide(cur).then(tc=>{if(seq!==loadSeq||!data)return;if(tc){applyTide(data,tc);renderSpot(false)}else{const tb=$("#tideBox");if(tb)tb.innerHTML=tideCard(tb.dataset.day)}});return}
   const m=e.target.closest("#app [data-m]");if(m){if(m.dataset.m!==model){model=m.dataset.m;store.set("wr5.model",model);
     document.querySelectorAll("#app [data-m]").forEach(b=>b.setAttribute("aria-pressed",b===m));
     if(!cGet(`wr5.c.w.${spotKey(cur)}.${model}`)){const sw=$("#sheet");if(sw)sw.style.opacity=".45";toast(model==="compare"?"正在载入三个模型…":"正在载入…")}

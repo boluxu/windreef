@@ -9,59 +9,110 @@
 <meta name="apple-mobile-web-app-title" content="风浪潮">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Cpath d=%22M6 2C14 6 19 13 18 21H6Z%22 fill=%22%2319e3b1%22/%3E%3C/svg%3E">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>Long Reef 风浪潮</title>
+<title>风浪潮</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
-/* Layout: one dark sea-chart console. Spot pill → wind/wave compass for the chosen hour → model tabs → day tabs + timeline → hourly sheet with a highlighted column → tide card. Single dark look by choice. */
+/* Layout: three views. 首页 = 我的位置 + 收藏地点（7 天风力条）+ 总览地图；地点页 = 地图（风浪方向叠加）→ 模型 → 日期/时间条 → 逐时表 → 潮汐；搜索页 = 搜索 + 最近查看 + 地图选点。Single dark look by choice. */
 :root{
   color-scheme:dark;
-  --bg:#1f3a4a; --deep:#183140; --panel:#264657; --panel2:#2d5265; --line:#36596b;
+  --bg:#1f3a4a; --deep:#183140; --panel:#2a4a5b; --panel2:#33566a; --line:#36596b;
   --ink:#eef5f7; --muted:#9cb5c0; --dim:#7893a0;
   --accent:#19e3b1; --warn:#ffb648; --red:#ff5a5f;
-  --wave:#4aa6e8; --wavebox:#2f6f9c; --tide:#6fd3e8; --tidefill:rgba(111,211,232,.18);
+  --wave:#d6e6ee; --wavebox:#2f6f9c; --tide:#6fd3e8; --tidefill:rgba(111,211,232,.18);
   --night:rgba(5,18,26,.38); --colsel:rgba(255,255,255,.20); --cellink:#0b1c24;
   --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --body:"Barlow",-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
 }
 html,body{background:var(--bg);color:var(--ink)}
 body{font-family:var(--body);font-size:15px;line-height:1.45}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
-.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px;max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:1000;background:var(--bg)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px;max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 button,select,input{font:inherit;color:inherit}
-button{cursor:pointer}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
+.ico{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-/* top bar */
+/* top bars */
 .top{display:flex;gap:10px;align-items:center}
-.round{flex:none;width:48px;height:48px;border-radius:50%;border:1.5px solid var(--line);background:transparent;display:grid;place-items:center}
-.round svg{width:22px;height:22px}
-.pill{flex:1;min-width:0;height:48px;border-radius:24px;border:1.5px solid var(--line);background:transparent;display:flex;align-items:center;gap:8px;padding:0 18px;text-align:left}
-.pill b{font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.pill small{color:var(--muted);font-family:var(--display);font-size:14px;white-space:nowrap;margin-left:auto}
+.round{flex:none;width:48px;height:48px;border-radius:50%;border:1.5px solid var(--line);background:var(--bg);display:grid;place-items:center;position:relative}
+.dot{position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;background:var(--red)}
+.duo{display:flex;border:1.5px solid var(--line);border-radius:24px;height:48px;margin-left:auto;background:var(--bg)}
+.duo button{border:0;background:none;width:56px;display:grid;place-items:center}
+.pill{flex:1;min-width:0;height:48px;border-radius:24px;border:1.5px solid var(--line);background:var(--bg);display:flex;align-items:center;gap:4px;padding:0 6px 0 18px}
+.pill b{font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.pill button{flex:none;border:0;background:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center}
+.pill button[aria-pressed="true"] .ico{fill:var(--accent);stroke:var(--accent)}
+h2.sec{font-size:22px;font-weight:600;margin:10px 0 0;display:flex;justify-content:space-between;align-items:baseline}
+h2.sec button{border:0;background:none;color:var(--accent);font-size:15px;font-weight:600}
 
-/* now card */
-.now{display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr);gap:14px;align-items:center;background:var(--deep);border-radius:16px;padding:14px}
-.now svg text{font-family:var(--display)}
-.nowinfo{display:flex;flex-direction:column;gap:8px;min-width:0}
-.nowtime{font-size:13px;color:var(--muted)}
-.nowtime b{color:var(--ink);font-weight:600}
-.stat{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
-.stat .big{font-family:var(--display);font-weight:700;font-size:34px;line-height:1}
-.stat .u{color:var(--muted);font-size:13px}
-.stat .lab{font-size:12px;color:var(--muted);width:100%}
-.sailbadge{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border-radius:10px;padding:6px 10px;align-self:flex-start}
-.sailbadge svg{width:18px;height:22px}
-.sailbadge b{font-family:var(--display);font-size:22px}
-.sailbadge span{font-size:12px;color:var(--muted)}
-@media (max-width:420px){.now{grid-template-columns:150px minmax(0,1fr)}.stat .big{font-size:28px}}
+/* home cards */
+.hcard{background:var(--deep);border-radius:14px;overflow:hidden}
+.loc{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);font-size:18px;font-weight:600}
+.loc .ico{color:var(--ink)}
+.loc button{margin-left:auto;border:0;background:none;color:var(--muted)}
+.wx{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));text-align:center;padding:14px 8px 6px}
+.wx .d{font-family:var(--display);font-size:15px;font-weight:600;color:var(--muted);letter-spacing:.04em}
+.wx svg{width:34px;height:34px;margin:6px auto 2px;display:block}
+.wx .t{font-family:var(--display);font-size:22px;font-weight:600}
+.wx .t small{font-size:15px;color:var(--muted)}
+.windstrip{display:flex;align-items:center;gap:8px;padding:6px 16px 14px}
+.windstrip .ws-ico{flex:none;color:var(--muted);width:20px;height:20px}
+.strip{flex:1;display:flex;gap:3px;height:12px;min-width:0}
+.strip i{flex:1;min-width:0;height:100%}
+.strip i:first-child{border-radius:6px 0 0 6px}
+.strip i:last-child{border-radius:0 6px 6px 0}
+.daylab{display:flex;gap:3px;padding:0 16px 12px 44px}
+.daylab span{flex:1;min-width:0;text-align:center;font-family:var(--display);font-size:14px;font-weight:600;color:var(--muted);white-space:nowrap;letter-spacing:.03em}
+.daylab span.we{color:var(--ink)}
+.daylab svg{width:7px;height:10px;margin-right:1px;vertical-align:0}
+.fav{display:block;width:100%;text-align:left;border:0;background:var(--panel);border-radius:14px;padding:0;color:inherit}
+.fav .nm{display:flex;align-items:flex-start;gap:12px;padding:14px 16px 6px;font-size:19px;font-weight:600;line-height:1.25}
+.fav .nm .pin{flex:none;color:var(--accent);margin-top:1px}
+.fav .nm .now{margin-left:auto;font-family:var(--display);font-size:17px;color:var(--muted);white-space:nowrap;font-weight:600}
+.fav .nm .now b{font-size:22px}
+.favs{display:flex;flex-direction:column;gap:10px}
+.favrow{display:flex;gap:8px;align-items:stretch}
+.favrow .fav{flex:1;min-width:0}
+.edit{display:flex;flex-direction:column;gap:6px;justify-content:center}
+.edit button{width:40px;height:40px;border-radius:12px;border:0;background:var(--panel);display:grid;place-items:center}
+.edit button.x{color:var(--red)}
+.mapbox{position:relative;border-radius:14px;overflow:hidden;background:var(--deep)}
+.mapbox .map{height:240px}
+.mapbtn{position:absolute;right:10px;bottom:10px;z-index:500;width:40px;height:40px;border-radius:12px;border:0;background:rgba(24,49,64,.85);display:grid;place-items:center}
+.nomap{display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted);font-size:13px;min-height:160px}
+.empty{background:var(--deep);border-radius:14px;padding:18px;color:var(--muted);text-align:center}
+.cta{display:inline-flex;align-items:center;gap:8px;border:0;background:var(--accent);color:var(--cellink);font-weight:600;border-radius:12px;padding:10px 16px}
 
-/* model tabs */
+/* spot view */
+.spotmap{position:relative;margin-left:calc(-1 * max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(16px,env(safe-area-inset-right,0px)));background:var(--deep)}
+.spotmap .map{height:300px;transition:height .25s}
+.spotmap.big .map{height:68vh}
+.ro{position:absolute;left:12px;right:12px;bottom:12px;z-index:500;display:flex;gap:12px;align-items:center;background:rgba(24,49,64,.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:14px;padding:8px 12px;font-family:var(--display);flex-wrap:wrap;pointer-events:none}
+.ro .t{font-size:20px;font-weight:700}
+.ro .k{font-size:13px;color:var(--muted);font-family:var(--body)}
+.ro b{font-size:20px}
+.ro .sail{margin-left:auto;display:flex;align-items:center;gap:4px;color:var(--accent)}
+.ro .sail svg{width:14px;height:18px}
+.spotmap .mapbtn{bottom:auto;top:12px;right:max(12px,env(safe-area-inset-right,0px))}
+.compassonly{display:grid;place-items:center;height:300px}
+.leaflet-container{background:#aad3df;font-family:var(--body)}
+.leaflet-tile-pane{filter:saturate(.45) brightness(.92) contrast(.95)}
+.leaflet-control-attribution{font-size:9px!important;background:rgba(255,255,255,.6)!important}
+.leaflet-control-attribution a{color:#123!important}
+.leaflet-control-zoom{display:none}
+.ovl{pointer-events:none}
+.mlabel{background:rgba(24,49,64,.92);color:var(--ink);border-radius:999px;padding:3px 10px 3px 6px;font-family:var(--display);font-size:15px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.3);transform:translate(-14px,-50%)}
+.mlabel i{width:14px;height:14px;border-radius:50%;flex:none;border:2px solid #fff}
+.pickpin{width:28px;height:28px;margin:-28px 0 0 -14px}
+
 .models{display:flex;gap:4px;background:var(--deep);border-radius:14px;padding:5px;overflow-x:auto;scrollbar-width:none}
 .models button{flex:none;border:0;background:transparent;border-radius:10px;padding:9px 14px;font-weight:600;color:var(--ink);white-space:nowrap}
 .models button[aria-pressed="true"]{background:var(--accent);color:var(--cellink)}
-
-/* day tabs + timeline */
 .daytabs{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(52px,1fr);overflow-x:auto;scrollbar-width:none}
 .daytabs button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;padding:4px 0;color:var(--muted);font-family:var(--display);font-weight:600;line-height:1.1}
 .daytabs button .w{font-size:16px}
@@ -73,9 +124,7 @@ button{cursor:pointer}
 .timeline .bar{position:absolute;inset:6px 0;border-radius:6px}
 .timeline .win{position:absolute;top:2px;bottom:2px;border:3px solid #fff;border-radius:9px;background:rgba(255,255,255,.25);pointer-events:none;min-width:22px;transform:translateX(-50%)}
 .tlnote{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin:2px 6px 0}
-
-/* sheet */
-.sheetbox{background:var(--bg);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-left:calc(-1 * max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(16px,env(safe-area-inset-right,0px)))}
+.sheetbox{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-left:calc(-1 * max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(16px,env(safe-area-inset-right,0px)))}
 .sheetwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
 table.sheet{border-collapse:separate;border-spacing:0;font-family:var(--display);font-variant-numeric:tabular-nums}
 .sheet th,.sheet td{padding:0;text-align:center;white-space:nowrap}
@@ -103,20 +152,17 @@ table.sheet{border-collapse:separate;border-spacing:0;font-family:var(--display)
 .sheet tr.sec td{height:6px;cursor:default}
 .mk{display:block;font-size:11px;line-height:1;color:var(--tide);font-weight:600}
 .tval{font-size:15px}
-
-/* cards */
 .card{background:var(--deep);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .card h2{margin:0;font-size:15px;font-weight:600;color:var(--muted);letter-spacing:.04em}
 .card h2 b{color:var(--ink)}
 .tidelist{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
-.tl{background:var(--panel);border-radius:10px;padding:8px 12px;display:flex;flex-direction:column}
+.tl{background:var(--panel);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column}
 .tl .k{font-size:12px;color:var(--muted)}
 .tl .v{font-family:var(--display);font-weight:700;font-size:24px;font-variant-numeric:tabular-nums}
 .tl .h{font-family:var(--display);font-size:14px;color:var(--muted)}
 .meta{display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--muted)}
 .meta .sun{display:flex;gap:18px;font-family:var(--display);font-size:17px;color:var(--ink)}
 .note{font-size:13px;color:var(--muted);line-height:1.5}
-.note b{color:var(--ink)}
 .banner{background:var(--panel);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--muted)}
 .banner b{color:var(--warn)}
 .foot{font-size:12px;color:var(--dim);line-height:1.6}
@@ -126,46 +172,60 @@ table.sheet{border-collapse:separate;border-spacing:0;font-family:var(--display)
 .legend i{flex:1}
 .legendlab{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);font-family:var(--display)}
 
-/* sheets (drawers) */
-.scrim{position:fixed;inset:0;background:rgba(4,14,20,.6);z-index:20;display:flex;align-items:flex-end;justify-content:center}
-.drawer{background:var(--deep);width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
-.drawer h3{margin:0;font-size:18px;display:flex;justify-content:space-between;align-items:center}
-.drawer h3 button{border:0;background:var(--panel);border-radius:8px;padding:6px 12px}
-.field{display:flex;flex-direction:column;gap:6px}
+/* search view */
+.sbar{display:flex;gap:10px;align-items:center}
+.sbar input{flex:1;min-width:0;height:48px;border-radius:24px;border:1.5px solid var(--line);background:var(--bg);padding:0 20px;font-size:17px}
+.sbar input::placeholder{color:var(--dim)}
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--line);margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:0 max(16px,env(safe-area-inset-left,0px))}
+.tabs button{border:0;background:none;padding:10px 0;font-size:17px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent}
+.tabs button[aria-pressed="true"]{color:var(--accent);border-color:var(--accent)}
+.rlist{display:flex;flex-direction:column;border-radius:14px;overflow:hidden;gap:1px;background:var(--line)}
+.ritem{display:flex;align-items:center;gap:14px;background:var(--panel);border:0;padding:14px 16px;text-align:left;width:100%}
+.ritem .ico{color:var(--muted);flex:none}
+.ritem span{flex:1;min-width:0}
+.ritem b{display:block;font-size:17px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ritem small{color:var(--muted);font-size:14px}
+.ritem .add{flex:none;width:38px;height:38px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;background:none}
+.ritem .add[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.rhead{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px}
+.rhead b{font-size:20px}
+.rhead button{border:0;background:none;color:var(--muted)}
+.msg{font-size:14px;color:var(--warn);padding:4px 2px}
+
+/* pick view */
+.pickwrap{position:fixed;inset:0;z-index:50;background:var(--bg)}
+.pickwrap .map{position:absolute;inset:0}
+.pickbar{position:absolute;z-index:600;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));top:calc(12px + env(safe-area-inset-top,0px));display:flex;gap:10px;align-items:center}
+.pickbar .hint{flex:1;background:rgba(24,49,64,.9);border-radius:24px;padding:12px 18px;font-size:15px}
+.picksheet{position:absolute;z-index:600;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));background:var(--deep);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.picksheet .row{display:flex;gap:8px}
+.picksheet input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.btn{border:0;background:var(--accent);color:var(--cellink);font-weight:600;border-radius:12px;padding:11px 16px}
+.btn.ghost{background:var(--panel);color:var(--ink);font-weight:500}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(4,14,20,.6);z-index:2000;display:flex;align-items:flex-end;justify-content:center}
+.drawer{background:var(--deep);width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px;box-sizing:border-box}
+.drawer h3{margin:0;font-size:20px;display:flex;justify-content:space-between;align-items:center}
+.drawer h3 button{border:0;background:var(--panel);border-radius:10px;padding:6px 14px;font-size:15px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
 .field label{font-size:13px;color:var(--muted)}
-.field input,.field select{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.field input{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;box-sizing:border-box}
 .field .hint{font-size:12px;color:var(--dim)}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
-.field input,.field select{width:100%;box-sizing:border-box}
-.srow input{width:100%;box-sizing:border-box}
-.seg{display:flex;background:var(--panel);border-radius:10px;padding:3px;gap:3px}
-.seg button{flex:1;border:0;background:transparent;border-radius:8px;padding:8px 6px;font-size:14px}
+.seg{display:flex;background:var(--panel);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;border-radius:10px;padding:8px 6px;font-size:14px}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--cellink);font-weight:600}
-.srow{display:flex;gap:8px}
-.srow input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.btn{border:0;background:var(--accent);color:var(--cellink);font-weight:600;border-radius:10px;padding:10px 16px}
-.btn.ghost{background:var(--panel);color:var(--ink);font-weight:500}
-.list{display:flex;flex-direction:column;gap:6px}
-.item{display:flex;align-items:center;gap:8px;background:var(--panel);border-radius:10px;padding:10px 12px;border:1.5px solid transparent;text-align:left;width:100%}
-.item[aria-current="true"]{border-color:var(--accent)}
-.item span{flex:1;min-width:0}
-.item small{color:var(--muted)}
-.item .del{flex:none;border:0;background:transparent;color:var(--muted);font-size:18px;padding:0 4px}
-.msg{font-size:13px;color:var(--warn)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);border-radius:999px;padding:9px 18px;z-index:3000;font-weight:600;font-size:14px}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 </style>
 </head>
 <body>
 
-<div class="wrap">
-  <div class="top">
-    <button class="pill" id="spotBtn" type="button" aria-label="切换地点"><b id="spotName">Long Reef Headland</b><small id="spotCoord"></small></button>
-    <button class="round" id="setBtn" type="button" aria-label="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></svg></button>
-  </div>
-  <div id="banner"></div>
-  <div id="app"><div class="loading">正在载入预报…</div></div>
-  <div class="foot">数据来源：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>（CC BY 4.0）。风来自所选模型（ECMWF、NOAA GFS、德国 ICON）；浪与涌近 10 天用最佳组合模型，之后用 NOAA GFS 海浪模型补足到 16 天；潮汐根据 Open-Meteo 海平面数据（含过去 92 天）做调和分析推算，时间误差约半小时，礁石区活动请以 <a href="http://www.bom.gov.au/australia/tides/" target="_blank" rel="noopener">澳大利亚气象局潮汐表</a> 为准。建议帆面积为经验估算，仅供参考。</div>
-</div>
+<div id="vHome" class="wrap"></div>
+<div id="vSpot" class="wrap" hidden></div>
+<div id="vSearch" class="wrap" hidden></div>
+<div id="vPick" hidden></div>
 <div id="layer"></div>
 
 <script>
@@ -173,14 +233,52 @@ const SNAPSHOT = /*SNAPSHOT*/null;
 (function(){
 "use strict";
 const $=s=>document.querySelector(s);
-const DEF={name:"Long Reef Headland",lat:-33.7418,lon:151.3222};
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-let spots=store.get("wr.spots",[DEF]); if(!spots.length) spots=[DEF];
-let cur=store.get("wr.cur",spots[0]);
-let model=store.get("wr.model","best_match");
+const DEF_FAVS=[{name:"Long Reef Headland",lat:-33.7418,lon:151.3222},{name:"Botany Bay（Dolls Point）",lat:-33.9935,lon:151.1495},{name:"Kurnell（Silver Beach）",lat:-34.0048,lon:151.2016}];
+let favs=store.get("wr5.favs",DEF_FAVS);
+let recent=store.get("wr5.recent",[]);
+let cur=store.get("wr5.cur",favs[0]||DEF_FAVS[0]);
+let model=store.get("wr5.model","best_match");
 let cfg=Object.assign({weight:75,minSail:3.5,maxSail:9,style:"std",quiver:"",unit:"kn",step:1},store.get("wr.cfg",{}));
-let data=null, selI=null, fit=null;
-const MODELS=[["best_match","自动最佳"],["ecmwf_ifs025","欧洲 ECMWF"],["gfs_seamless","美国 GFS"],["icon_seamless","德国 ICON"]];
+let myLoc=store.get("wr5.myloc",null);
+let data=null,selI=null,fit=null,online=null,editMode=false;
+const MODELS=[["best_match","自动最佳"],["compare","模型对比"],["ecmwf_ifs025","欧洲 ECMWF"],["gfs_seamless","美国 GFS"],["icon_seamless","德国 ICON"]];
+const HAS_L=typeof L!=="undefined";
+
+/* ---------- icons (rounded line style) ---------- */
+const I={
+  menu:'<svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M4 12h11M4 17h16"/></svg>',
+  search:'<svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>',
+  map:'<svg class="ico" viewBox="0 0 24 24"><path d="M9 4.5 3.8 6.6a1 1 0 0 0-.6.9v11.6a.6.6 0 0 0 .8.6L9 17.5l6 2 5.2-2.1a1 1 0 0 0 .6-.9V4.9a.6.6 0 0 0-.8-.6L15 6.5zM9 4.5v13M15 6.5v13"/></svg>',
+  back:'<svg class="ico" viewBox="0 0 24 24"><path d="m14.5 5-7 7 7 7"/></svg>',
+  star:'<svg class="ico" viewBox="0 0 24 24"><path d="m12 3.6 2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z"/></svg>',
+  share:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 15V4M8 7.5 12 3.6l4 3.9M7 11H6a1.5 1.5 0 0 0-1.5 1.5v6A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-6A1.5 1.5 0 0 0 18 11h-1"/></svg>',
+  pin:'<svg class="ico" viewBox="0 0 24 24" style="fill:currentColor;stroke:none"><path d="M12 2.5a7 7 0 0 0-7 7c0 5 7 12 7 12s7-7 7-12a7 7 0 0 0-7-7zm0 9.6a2.6 2.6 0 1 1 0-5.2 2.6 2.6 0 0 1 0 5.2z"/></svg>',
+  loc:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 2.5a7 7 0 0 0-7 7c0 5 7 12 7 12s7-7 7-12a7 7 0 0 0-7-7z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+  gear:'<svg class="ico" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></svg>',
+  wind:'<svg class="ico ws-ico" viewBox="0 0 24 24"><path d="M3 8h10.5a2.5 2.5 0 1 0-2.5-2.5M3 12h15.5a2.5 2.5 0 1 1-2.5 2.5M3 16h8"/></svg>',
+  expand:'<svg class="ico" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5"/></svg>',
+  shrink:'<svg class="ico" viewBox="0 0 24 24"><path d="M20 10h-6V4M4 14h6v6M14 10l6.5-6.5M10 14l-6.5 6.5"/></svg>',
+  clock:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  plus:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  check:'<svg class="ico" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  up:'<svg class="ico" viewBox="0 0 24 24"><path d="m6 14 6-6 6 6"/></svg>',
+  down:'<svg class="ico" viewBox="0 0 24 24"><path d="m6 10 6 6 6-6"/></svg>',
+  x:'<svg class="ico" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>',
+  drop:'<svg viewBox="0 0 9 12"><path d="M4.5 0.8C3 3.3 1 5.6 1 7.7a3.5 3.5 0 0 0 7 0C8 5.6 6 3.3 4.5.8z" fill="currentColor"/></svg>',
+};
+function wxIcon(code){
+  const sun='<circle cx="17" cy="15" r="5.2" fill="#ffc94d"/><g stroke="#ffc94d" stroke-width="2" stroke-linecap="round"><path d="M17 5.5v2M17 22.5v2M7.5 15h2M24.5 15h2M10.3 8.3l1.4 1.4M22.3 20.3l1.4 1.4M23.7 8.3l-1.4 1.4M11.7 20.3l-1.4 1.4"/></g>';
+  const cloud=(y=0,c="#dfe9ee")=>`<path d="M10 ${27+y}h13.5a5 5 0 0 0 .6-10 7 7 0 0 0-13.3 1.6A4.3 4.3 0 0 0 10 ${27+y}z" fill="${c}" />`;
+  let s="";
+  if(code<=1)s=sun;
+  else if(code===2)s='<g transform="translate(-4 -5) scale(.8)">'+sun+'</g>'+cloud(2);
+  else if(code<=48)s=cloud(0,"#c3d3db")+'<path d="M6 21h3" stroke="#c3d3db" stroke-width="2" stroke-linecap="round"/>';
+  else if(code<=67||(code>=80&&code<=82))s=cloud(-4)+'<g stroke="#6fd3e8" stroke-width="2" stroke-linecap="round"><path d="M13 27l-1.2 3M18 27l-1.2 3"/></g>';
+  else if(code<=77||code===85||code===86)s=cloud(-4)+'<g fill="#fff"><circle cx="13" cy="28.5" r="1.4"/><circle cx="18.5" cy="28.5" r="1.4"/></g>';
+  else s=cloud(-4)+'<path d="M17 24l-3 4.5h3l-2 4" fill="none" stroke="#ffc94d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+  return`<svg viewBox="0 0 34 34">${s}</svg>`;
+}
 
 /* ---------- helpers ---------- */
 const WK=["日","一","二","三","四","五","六"];
@@ -192,8 +290,7 @@ const STOPS=[[0,[150,200,226]],[4,[96,176,226]],[8,[72,150,214]],[11,[80,200,120
 function windColor(k){if(k==null)return"transparent";let i=0;while(i<STOPS.length-2&&k>STOPS[i+1][0])i++;const[a0,c0]=STOPS[i],[a1,c1]=STOPS[i+1];const t=Math.max(0,Math.min(1,(k-a0)/(a1-a0)));const c=c0.map((v,j)=>Math.round(v+(c1[j]-v)*t));return`rgb(${c[0]},${c[1]},${c[2]})`}
 function arrow(fromDeg,size=20){if(fromDeg==null)return"";const r=(fromDeg+180)%360;return`<span class="arr" style="width:${size}px;height:${size}px"><svg viewBox="0 0 20 20" width="${size}" height="${size}" style="transform:rotate(${r}deg)"><path d="M10 17V4.5M4.8 9.6 10 4.4l5.2 5.2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`}
 const CARD=["北","北偏东北","东北","东偏东北","东","东偏东南","东南","南偏东南","南","南偏西南","西南","西偏西南","西","西偏西北","西北","北偏西北"];
-function card(d){return d==null?"":CARD[Math.round(d/22.5)%16]+"风"}
-function cardW(d){return d==null?"":"来自"+CARD[Math.round(d/22.5)%16]}
+const dirName=d=>d==null?"":CARD[Math.round(d/22.5)%16];
 const f1=v=>v==null?"–":(Math.round(v*10)/10).toFixed(1);
 const f0=v=>v==null?"–":String(Math.round(v));
 const UNIT={kn:["节",1],ms:["米/秒",0.514444],kmh:["公里/时",1.852]};
@@ -201,9 +298,15 @@ const wv=k=>{if(k==null)return"–";const v=k*UNIT[cfg.unit][1];return cfg.unit=
 const wu=()=>UNIT[cfg.unit][0];
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 const sailIcon=`<svg viewBox="0 0 16 20"><path d="M4 2.2C9.5 4.6 13.2 10 12.6 16.4 12.55 16.8 12.2 17 11.8 17H4.8C4.35 17 4 16.65 4 16.2Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1.2" stroke-linejoin="round"/><rect x="1.5" y="18" width="13" height="1.8" rx=".9" fill="var(--accent)"/></svg>`;
+function sameSpot(a,b){return a&&b&&Math.abs(a.lat-b.lat)<1e-3&&Math.abs(a.lon-b.lon)<1e-3}
+function isFav(s){return favs.some(f=>sameSpot(f,s))}
+function dist(a,b){const R=6371,r=Math.PI/180;const dl=(b.lat-a.lat)*r,dn=(b.lon-a.lon)*r;const x=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+function coordTxt(s){return`${Math.abs(s.lat).toFixed(3)}°${s.lat<0?"S":"N"} ${Math.abs(s.lon).toFixed(3)}°${s.lon<0?"W":"E"}`}
+function toast(t){const el=document.createElement("div");el.className="toast";el.textContent=t;document.body.appendChild(el);setTimeout(()=>el.remove(),1800)}
+function localDateIn(tz){try{return new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())}catch(e){return new Date().toISOString().slice(0,10)}}
+function nowTh(tz){try{const p=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date());const o={};p.forEach(x=>o[x.type]=x.value);return parseT(`${o.year}-${o.month}-${o.day}T${o.hour}:${o.minute}`)}catch(e){return null}}
 
 /* ---------- sail size ---------- */
-// 经验公式：帆面积(㎡) ≈ 1.34 × 体重(kg) ÷ 风速(节)。保守 ×0.88，激进 ×1.12
 function sailFor(kn){
   if(kn==null)return{v:null};
   const k={safe:0.88,std:1,bold:1.12}[cfg.style]||1;
@@ -230,12 +333,13 @@ function fitTide(ts,vs){
   for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(A[r][c])>Math.abs(A[p][c]))p=r;[A[c],A[p]]=[A[p],A[c]];[b[c],b[p]]=[b[p],b[c]];
     for(let r=c+1;r<n;r++){const f=A[r][c]/A[c][c];if(!f)continue;for(let k=c;k<n;k++)A[r][k]-=f*A[c][k];b[r]-=f*b[c]}}
   const x=new Float64Array(n);for(let r=n-1;r>=0;r--){let s=b[r];for(let k=r+1;k<n;k++)s-=A[r][k]*x[k];x[r]=s/A[r][r]}
-  return {h:t=>{const tt=t-t0;let s=0;for(let j=0;j<w.length;j++)s+=x[1+2*j]*Math.cos(w[j]*tt)+x[2+2*j]*Math.sin(w[j]*tt);return s},mean:x[0]};
+  return {h:t=>{const tt=t-t0;let s=0;for(let j=0;j<w.length;j++)s+=x[1+2*j]*Math.cos(w[j]*tt)+x[2+2*j]*Math.sin(w[j]*tt);return s}};
 }
 function extrema(f,a,b){const out=[];const dt=0.1;let p=f(a-dt),c=f(a);for(let t=a;t<=b;t+=dt){const nx=f(t+dt);if(c>p&&c>=nx)out.push({t,hi:true});else if(c<p&&c<=nx)out.push({t,hi:false});p=c;c=nx}
   return out.map(e=>{const y0=f(e.t-dt),y1=f(e.t),y2=f(e.t+dt);const d=(y0-2*y1+y2);const off=d?0.5*(y0-y2)/d*dt:0;return{t:e.t+off,h:f(e.t+off),hi:e.hi}})}
 
 /* ---------- data ---------- */
+async function getJSON(u){const r=await fetch(u);if(!r.ok){let m="";try{m=(await r.json()).reason}catch(e){}throw new Error(m||("HTTP "+r.status))}return r.json()}
 function urls(s,m){
   const fc=`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation,precipitation_probability&daily=sunrise,sunset&forecast_days=16&wind_speed_unit=kn&timezone=auto&models=${m}&cell_selection=sea`;
   const mv="wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,sea_surface_temperature";
@@ -243,218 +347,358 @@ function urls(s,m){
   const td=`https://marine-api.open-meteo.com/v1/marine?latitude=${s.lat}&longitude=${s.lon}&hourly=sea_level_height_msl&past_days=92&forecast_days=16&timezone=auto&cell_selection=sea`;
   return{fc,mr,td};
 }
-async function getJSON(u){const r=await fetch(u);if(!r.ok){let m="";try{m=(await r.json()).reason}catch(e){}throw new Error(m||("HTTP "+r.status))}return r.json()}
-function sameSpot(a,b){return a&&b&&Math.abs(a.lat-b.lat)<1e-3&&Math.abs(a.lon-b.lon)<1e-3}
-function localDateIn(tz){try{return new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())}catch(e){return new Date().toISOString().slice(0,10)}}
-function nowTh(tz){try{const p=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date());const o={};p.forEach(x=>o[x.type]=x.value);return parseT(`${o.year}-${o.month}-${o.day}T${o.hour}:${o.minute}`)}catch(e){return null}}
-
+const miniCache={};
+async function getMini(s,land){
+  const key=`${s.lat.toFixed(3)},${s.lon.toFixed(3)}`;const c=miniCache[key]||store.get("wr5.mini."+key,null);
+  if(c&&Date.now()-c.ts<30*60e3){miniCache[key]=c;return c}
+  try{const d=await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&current=wind_speed_10m,wind_direction_10m&forecast_days=7&wind_speed_unit=kn&timezone=auto${land?"":"&cell_selection=sea"}`);
+    online=true;const m={ts:Date.now(),tz:d.timezone,ws:d.hourly.wind_speed_10m,time:d.hourly.time,days:d.daily.time.map((t,i)=>({date:t,code:d.daily.weather_code[i],tmax:d.daily.temperature_2m_max[i],tmin:d.daily.temperature_2m_min[i],rain:d.daily.precipitation_sum[i]})),now:d.current&&d.current.wind_speed_10m,nowdir:d.current&&d.current.wind_direction_10m};
+    miniCache[key]=m;store.set("wr5.mini."+key,m);return m}
+  catch(e){online=online||false;
+    if(SNAPSHOT&&sameSpot(SNAPSHOT.spot,s)){const H=SNAPSHOT.fc.best_match.hourly;const n=7*24;const days=[];for(let i=0;i<7;i++){const sl=H.precipitation.slice(i*24,i*24+24);days.push({date:H.time[i*24].slice(0,10),rain:sl.reduce((a,b)=>a+(b||0),0)})}
+      return{snap:true,tz:SNAPSHOT.fc.best_match.timezone,ws:H.wind_speed_10m.slice(0,n),time:H.time.slice(0,n),days}}
+    if(c)return c;throw e}
+}
 function normalize(raw){
   const {fc,mr,td}=raw;const H=fc.hourly,M=mr.hourly;
   const mIdx=new Map(M.time.map((t,i)=>[t,i]));
   const pick=(k,i)=>{if(i==null)return null;const a=M[k+"_marine_best_match"]??M[k];const g=M[k+"_ncep_gfswave025"];const v=a?a[i]:null;return v!=null?v:(g?g[i]:null)};
   const hours=H.time.map((t,i)=>{const j=mIdx.get(t);
-    return{t,th:parseT(t),date:t.slice(0,10),hh:+t.slice(11,13),ws:H.wind_speed_10m[i],wg:H.wind_gusts_10m[i],wd:H.wind_direction_10m[i],temp:H.temperature_2m[i],pr:H.precipitation[i],pp:H.precipitation_probability?H.precipitation_probability[i]:null,
+    return{t,th:parseT(t),date:t.slice(0,10),hh:+t.slice(11,13),ws:H.wind_speed_10m[i],wg:H.wind_gusts_10m[i],wd:H.wind_direction_10m[i],temp:H.temperature_2m[i],pr:H.precipitation[i],
       wh:pick("wave_height",j),wdir:pick("wave_direction",j),wp:pick("wave_period",j),sh:pick("swell_wave_height",j),sd:pick("swell_wave_direction",j),sp:pick("swell_wave_period",j),sst:pick("sea_surface_temperature",j)}}).filter(h=>h.ws!=null);
+  if(raw.cmp){const ix=new Map(H.time.map((t,i)=>[t,i]));CMP.forEach(([k])=>{const c=raw.cmp[k];if(!c)return;const cm=new Map(c.hourly.time.map((t,i)=>[t,c.hourly.wind_speed_10m[i]]));hours.forEach(h=>{(h.cmp=h.cmp||{})[k]=cm.get(h.t)??null})})}
   const sun={};fc.daily.time.forEach((d,i)=>sun[d]={rise:fc.daily.sunrise[i],set:fc.daily.sunset[i]});
-  fit=fitTide(td.hourly.time.map(parseT),td.hourly.sea_level_height_msl);
+  fit=td?fitTide(td.hourly.time.map(parseT),td.hourly.sea_level_height_msl):null;
   if(fit)hours.forEach(h=>h.tide=fit.h(h.th));
   const dates=[...new Set(hours.map(h=>h.date))];
   const tideX=fit?extrema(fit.h,hours[0].th,hours[hours.length-1].th+1):[];
   return{hours,sun,dates,tideX,tz:fc.timezone};
 }
 
-async function load(){
-  $("#app").innerHTML='<div class="loading">正在载入预报…</div>';$("#banner").innerHTML="";
-  renderTop();
-  const u=urls(cur,model);let raw=null,mode="live",err=null;
-  try{const[fc,mr,td]=await Promise.all([getJSON(u.fc),getJSON(u.mr),getJSON(u.td)]);raw={fc,mr,td,fetched:new Date().toISOString()}}
-  catch(e){err=e}
-  if(!raw&&SNAPSHOT&&sameSpot(SNAPSHOT.spot,cur)){const fc=SNAPSHOT.fc[model]||SNAPSHOT.fc.best_match;raw={fc,mr:SNAPSHOT.mr,td:SNAPSHOT.td,fetched:SNAPSHOT.fetched};mode="snap"}
-  if(!raw){$("#app").innerHTML=`<div class="banner"><b>载入失败</b>：${esc(err&&err.message||"网络错误")}。这个页面需要访问 open-meteo.com，请检查网络后重试。</div>`;return}
-  data=normalize(raw);data.mode=mode;
-  const n=nowTh(data.tz);let i=data.hours.findIndex(h=>h.th>=n-0.5);if(i<0)i=0;selI=i;
-  if(mode==="snap"){const g=new Date(raw.fetched);$("#banner").innerHTML=`<div class="banner"><b>快照数据</b>，抓取于 ${g.toLocaleString("zh-CN",{timeZone:"Australia/Sydney",month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false})}（悉尼时间）。当前预览环境不能联网，所以不会自动更新、也不能搜索新地点。把这个网页文件放到 GitHub Pages 等普通网址后，每次打开都会获取最新数据。</div>`}
-  render(true);
+/* ---------- router ---------- */
+function go(view){if(view==="home"){if(location.hash){history.pushState(null,"",location.pathname+location.search);}route()}else{location.hash=view}}
+function back(){if(history.length>1&&document.referrer!==location.href)history.back();else go("home")}
+function route(){
+  const v=(location.hash||"").slice(1);
+  ["vHome","vSpot","vSearch","vPick"].forEach(id=>$("#"+id).hidden=true);
+  closeDrawer();
+  if(v==="spot"){$("#vSpot").hidden=false;showSpot()}
+  else if(v==="search"){$("#vSearch").hidden=false;showSearch()}
+  else if(v==="pick"){$("#vPick").hidden=false;showPick()}
+  else{$("#vHome").hidden=false;showHome()}
+  window.scrollTo(0,0);
+}
+window.addEventListener("hashchange",route);
+window.addEventListener("popstate",()=>{if(!location.hash)route()});
+function openSpot(s){cur={name:s.name,lat:+s.lat,lon:+s.lon};store.set("wr5.cur",cur);
+  recent=[cur,...recent.filter(r=>!sameSpot(r,cur))].slice(0,12);store.set("wr5.recent",recent);
+  if(location.hash==="#spot")route();else location.hash="spot"}
+
+/* ---------- HOME ---------- */
+let homeMap=null;
+function showHome(){
+  const v=$("#vHome");
+  v.innerHTML=`<div class="top"><button class="round" id="hMenu" type="button" aria-label="设置">${I.menu}${cfg.weightSet?"":'<span class="dot"></span>'}</button>
+    <div class="duo"><button type="button" id="hSearch" aria-label="搜索地点">${I.search}</button><button type="button" id="hMap" aria-label="在地图上选点">${I.map}</button></div></div>
+    <div class="hcard" id="myCard"></div>
+    <h2 class="sec">收藏的地点 <button type="button" id="hEdit">${editMode?"完成":"编辑"}</button></h2>
+    <div class="favs" id="favList"></div>
+    <h2 class="sec">地图总览</h2>
+    <div class="mapbox" id="homeMapBox"></div>
+    <div class="foot">数据来源：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>（CC BY 4.0）。地图：© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 贡献者。</div>`;
+  $("#hMenu").onclick=setDrawer;$("#hSearch").onclick=()=>go("search");$("#hMap").onclick=()=>go("pick");
+  $("#hEdit").onclick=()=>{editMode=!editMode;$("#hEdit").textContent=editMode?"完成":"编辑";renderFavs()};
+  renderMyCard();renderFavs();renderHomeMap();
+}
+function stripHTML(m){
+  const days=m.days.map(d=>d.date);const segs=days.map(d=>{const idx=m.time.map((t,i)=>t.startsWith(d)?i:-1).filter(i=>i>=0);
+    const st=idx.map((i,k)=>`${windColor(m.ws[i])} ${(k/(idx.length-1||1)*100).toFixed(1)}%`).join(",");return`<i style="background:linear-gradient(90deg,${st})"></i>`}).join("");
+  const today=localDateIn(m.tz);
+  const labs=m.days.map(d=>{const w=wk(d.date);return`<span class="${w===0||w===6?"we":""}">${d.rain>=1?`<span style="color:var(--tide)">${I.drop}</span>`:""}${d.date===today?"今天":"周"+WK[w]}</span>`}).join("");
+  return`<div class="windstrip">${I.wind}<div class="strip">${segs}</div></div><div class="daylab">${labs}</div>`;
+}
+async function renderMyCard(){
+  const box=$("#myCard");if(!box)return;
+  if(!myLoc){box.innerHTML=`<div class="loc">${I.loc}<span>我的位置</span></div><div style="padding:16px;display:flex;flex-direction:column;gap:10px;align-items:flex-start"><span class="note">打开定位后，这里会显示你所在位置未来 5 天的天气和风力。</span><button class="cta" id="useLoc" type="button">${I.loc} 使用我的位置</button></div>`;
+    $("#useLoc").onclick=()=>{if(!navigator.geolocation){toast("这个浏览器不支持定位");return}
+      navigator.geolocation.getCurrentPosition(p=>{myLoc={name:"我的位置",lat:+p.coords.latitude.toFixed(4),lon:+p.coords.longitude.toFixed(4)};store.set("wr5.myloc",myLoc);renderMyCard()},()=>toast("没有拿到定位权限"),{timeout:10000,maximumAge:600000})};return}
+  box.innerHTML=`<div class="loc">${I.loc}<span>我的位置</span><button type="button" id="locOff" aria-label="关闭我的位置">${I.x}</button></div><div class="loading" style="padding:24px">载入中…</div>`;
+  $("#locOff").onclick=()=>{myLoc=null;store.set("wr5.myloc",null);renderMyCard()};
+  try{const m=await getMini(myLoc,true);const today=localDateIn(m.tz);
+    box.querySelector(".loading").outerHTML=`<button type="button" class="fav" id="myOpen" style="background:none;border-radius:0">
+      ${m.days[0].code!=null?`<div class="wx">${m.days.slice(0,5).map(d=>{const w=wk(d.date);return`<div><div class="d">${d.date===today?"今天":"周"+WK[w]} ${d.date.slice(8)}</div>${wxIcon(d.code)}<div class="t">${f0(d.tmax)}°<small> ${f0(d.tmin)}°</small></div></div>`}).join("")}</div>`:""}${stripHTML(m)}</button>`;
+    $("#myOpen").onclick=()=>openSpot(myLoc)}
+  catch(e){box.querySelector(".loading").outerHTML=`<div class="msg" style="padding:12px 16px">${online===false?"当前环境不能联网，放到 GitHub Pages 上即可显示。":"载入失败，稍后再试。"}</div>`}
+}
+function renderFavs(){
+  const box=$("#favList");if(!box)return;
+  if(!favs.length){box.innerHTML=`<div class="empty">还没有收藏地点。<br><br><button class="cta" type="button" id="favAdd">${I.search} 搜索并添加</button></div>`;$("#favAdd").onclick=()=>go("search");return}
+  box.innerHTML=favs.map((s,i)=>`<div class="favrow"><button type="button" class="fav" data-i="${i}"><div class="nm"><span class="pin">${I.pin}</span><span>${esc(s.name)}</span><span class="now" id="fnow${i}"></span></div><div id="fs${i}"><div class="windstrip">${I.wind}<div class="strip"><i style="background:var(--deep)"></i></div></div><div class="daylab"><span>载入中…</span></div></div></button>
+    ${editMode?`<div class="edit"><button type="button" data-up="${i}" aria-label="上移" ${i===0?"disabled":""}>${I.up}</button><button type="button" class="x" data-del="${i}" aria-label="删除">${I.x}</button></div>`:""}</div>`).join("");
+  box.onclick=e=>{const up=e.target.closest("[data-up]"),del=e.target.closest("[data-del]"),f=e.target.closest(".fav");
+    if(up){const i=+up.dataset.up;if(i>0){[favs[i-1],favs[i]]=[favs[i],favs[i-1]];store.set("wr5.favs",favs);renderFavs();renderHomeMap()}return}
+    if(del){favs.splice(+del.dataset.del,1);store.set("wr5.favs",favs);renderFavs();renderHomeMap();return}
+    if(f&&!editMode)openSpot(favs[+f.dataset.i])};
+  favs.forEach(async(s,i)=>{try{const m=await getMini(s);const el=$("#fs"+i);if(el)el.innerHTML=stripHTML(m);
+      const n=$("#fnow"+i);if(n&&m.now!=null)n.innerHTML=`${arrow(m.nowdir,16)} <b style="color:${windColor(m.now)}">${wv(m.now)}</b> ${wu()}`;
+      s._now=m.now;s._dir=m.nowdir;if(online===false&&homeMap)renderHomeMap();else updateHomeMarkers()}
+    catch(e){if(online===false&&homeMap)renderHomeMap();const el=$("#fs"+i);if(el)el.innerHTML=`<div class="msg" style="padding:4px 16px 14px">${online===false?"当前环境不能联网，没有这个地点的离线数据。":"载入失败"}</div>`}});
+}
+const TILE="https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const ATTR='© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+function mapOK(){return HAS_L&&online!==false}
+function renderHomeMap(){
+  const box=$("#homeMapBox");if(!box)return;
+  if(homeMap){homeMap.remove();homeMap=null}
+  if(!mapOK()){box.innerHTML=`<div class="nomap">地图需要联网加载。放到 GitHub Pages 上打开即可显示。</div>`;return}
+  box.innerHTML=`<div class="map" id="homeMap"></div><button class="mapbtn" type="button" id="toPick" aria-label="地图选点">${I.expand}</button>`;
+  $("#toPick").onclick=()=>go("pick");
+  homeMap=L.map("homeMap",{zoomControl:false,attributionControl:true,dragging:!L.Browser.mobile,tap:false,scrollWheelZoom:false}).setView([cur.lat,cur.lon],9);
+  L.tileLayer(TILE,{maxZoom:18,attribution:ATTR}).addTo(homeMap);
+  updateHomeMarkers();
+  const pts=favs.map(s=>[s.lat,s.lon]);if(pts.length>1)homeMap.fitBounds(pts,{padding:[40,40],maxZoom:11});else if(pts.length)homeMap.setView(pts[0],10);
+}
+let homeMarkers=[];
+function updateHomeMarkers(){
+  if(!homeMap)return;homeMarkers.forEach(m=>m.remove());homeMarkers=favs.map(s=>{
+    const lab=`<div class="mlabel"><i style="background:${windColor(s._now)}"></i>${s._now!=null?`${wv(s._now)} ${wu()}`:esc(s.name.split(/[（(]/)[0])}</div>`;
+    const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:"",html:lab,iconSize:[0,0]})}).addTo(homeMap);m.on("click",()=>openSpot(s));return m});
 }
 
-/* ---------- render ---------- */
-function renderTop(){
-  $("#spotName").textContent=cur.name;
-  $("#spotCoord").textContent=`${Math.abs(cur.lat).toFixed(2)}°${cur.lat<0?"南":"北"} ${Math.abs(cur.lon).toFixed(2)}°${cur.lon<0?"西":"东"}`;
+/* ---------- SEARCH ---------- */
+let searchTab="all";
+function showSearch(){
+  const v=$("#vSearch");
+  v.innerHTML=`<div class="sbar"><button class="round" type="button" id="sBack" aria-label="返回">${I.back}</button><input id="q" type="search" enterkeyhint="search" placeholder="输入地点名称或坐标" autocomplete="off"></div>
+    <div class="tabs"><button type="button" data-t="all" aria-pressed="${searchTab==="all"}">全部</button><button type="button" data-t="fav" aria-pressed="${searchTab==="fav"}">收藏</button></div>
+    <button type="button" class="ritem" id="sPick" style="border-radius:14px">${I.map}<span><b>在地图上选点</b><small>适合找没有名字的礁石、海湾</small></span></button>
+    <div id="sRes"></div><div id="sRecent"></div>`;
+  $("#sBack").onclick=back;$("#sPick").onclick=()=>go("pick");
+  v.querySelector(".tabs").onclick=e=>{const b=e.target.closest("[data-t]");if(!b)return;searchTab=b.dataset.t;v.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderRecent()};
+  const q=$("#q");let tmr=0;q.addEventListener("input",()=>{clearTimeout(tmr);tmr=setTimeout(runSearch,350)});q.addEventListener("keydown",e=>{if(e.key==="Enter"){clearTimeout(tmr);runSearch();q.blur()}});
+  setTimeout(()=>q.focus(),50);
+  renderRecent();
 }
+function itemHTML(s,i,src){const d=myLoc?`${Math.round(dist(myLoc,s))} 公里 · `:"";const sub=s.sub?esc(s.sub):coordTxt(s);
+  return`<div class="ritem" style="cursor:pointer" data-src="${src}" data-i="${i}">${s.icon==="clock"?I.clock:I.loc}<span><b>${esc(s.name)}</b><small>${d}${sub}</small></span><button type="button" class="add" data-fav="${i}" aria-pressed="${isFav(s)}" aria-label="收藏">${isFav(s)?I.check:I.plus}</button></div>`}
+let lastRes=[];
+function bindList(el,arr){el.onclick=e=>{const fb=e.target.closest("[data-fav]");const row=e.target.closest(".ritem");if(!row)return;const s=arr[+row.dataset.i];
+  if(fb){e.stopPropagation();toggleFav(s);fb.setAttribute("aria-pressed",isFav(s));fb.innerHTML=isFav(s)?I.check:I.plus;return}openSpot(s)}}
+function renderRecent(){
+  const box=$("#sRecent");if(!box)return;
+  const arr=searchTab==="fav"?favs:recent.map(r=>Object.assign({icon:"clock"},r));
+  box.innerHTML=`<div class="rhead"><b>${searchTab==="fav"?"收藏的地点":"最近查看"}</b>${searchTab!=="fav"&&recent.length?'<button type="button" id="rClear">清空</button>':""}</div>
+    ${arr.length?`<div class="rlist" style="margin-top:10px">${arr.map((s,i)=>itemHTML(s,i,"r")).join("")}</div>`:`<div class="note" style="margin-top:8px">${searchTab==="fav"?"还没有收藏。":"还没有查看记录。"}</div>`}`;
+  const rl=box.querySelector(".rlist");if(rl)bindList(rl,arr);
+  const c=$("#rClear");if(c)c.onclick=()=>{recent=[];store.set("wr5.recent",recent);renderRecent()};
+}
+async function runSearch(){
+  const q=$("#q").value.trim(),box=$("#sRes");if(!q){box.innerHTML="";return}
+  const m=q.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,，\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if(m){lastRes=[{name:`${(+m[1]).toFixed(3)}, ${(+m[2]).toFixed(3)}`,lat:+m[1],lon:+m[2]}]}
+  else{box.innerHTML='<div class="note">搜索中…</div>';
+    try{const r=await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=zh&format=json`);
+      lastRes=(r.results||[]).map(p=>({name:p.name,lat:p.latitude,lon:p.longitude,sub:[p.admin2,p.admin1,p.country].filter(Boolean).join("，")}))}
+    catch(e){box.innerHTML='<div class="msg">搜索需要联网访问 open-meteo.com，当前环境不允许。放到 GitHub Pages 上即可搜索；现在也可以输入 纬度,经度，或者在地图上选点。</div>';return}}
+  {const ref=myLoc||cur;lastRes.sort((a,b)=>dist(ref,a)-dist(ref,b))}
+  box.innerHTML=lastRes.length?`<div class="rhead"><b>搜索结果</b></div><div class="rlist" style="margin-top:10px">${lastRes.map((s,i)=>itemHTML(s,i,"s")).join("")}</div>`:'<div class="msg">没找到。试试英文名（例如 Long Reef），或者用地图选点。</div>';
+  const rl=box.querySelector(".rlist");if(rl)bindList(rl,lastRes);
+}
+function toggleFav(s){if(isFav(s))favs=favs.filter(f=>!sameSpot(f,s));else favs.push({name:s.name,lat:s.lat,lon:s.lon});store.set("wr5.favs",favs);toast(isFav(s)?"已收藏":"已取消收藏")}
+
+/* ---------- PICK ---------- */
+let pickMap=null,pickMk=null,pickPt=null;
+function showPick(){
+  const v=$("#vPick");
+  if(!mapOK()){v.innerHTML=`<div class="wrap"><div class="top"><button class="round" type="button" id="pBack">${I.back}</button></div><div class="nomap">地图需要联网加载。放到 GitHub Pages 上打开即可在地图上选点。</div></div>`;$("#pBack").onclick=back;return}
+  v.innerHTML=`<div class="pickwrap"><div class="map" id="pickMap"></div><div class="pickbar"><button class="round" type="button" id="pBack" aria-label="返回">${I.back}</button><div class="hint">点地图选择下水点</div></div><div class="picksheet" id="pSheet" hidden></div></div>`;
+  $("#pBack").onclick=back;
+  if(pickMap){pickMap.remove();pickMap=null}
+  pickMap=L.map("pickMap",{zoomControl:false,tap:false}).setView([cur.lat,cur.lon],11);
+  L.tileLayer(TILE,{maxZoom:18,attribution:ATTR}).addTo(pickMap);
+  favs.forEach(s=>L.marker([s.lat,s.lon],{icon:L.divIcon({className:"",html:`<div class="mlabel"><i style="background:var(--accent)"></i>${esc(s.name.split(/[（(]/)[0])}</div>`,iconSize:[0,0]})}).addTo(pickMap).on("click",()=>openSpot(s)));
+  pickMap.on("click",e=>{pickPt={lat:+e.latlng.lat.toFixed(4),lon:+e.latlng.lng.toFixed(4)};
+    const icon=L.divIcon({className:"",html:`<div class="pickpin" style="color:var(--red)">${I.pin.replace('class="ico"','class="ico" style="width:28px;height:28px;fill:#ff5a5f"')}</div>`,iconSize:[0,0]});
+    if(pickMk)pickMk.setLatLng(e.latlng);else pickMk=L.marker(e.latlng,{icon}).addTo(pickMap);
+    const sh=$("#pSheet");sh.hidden=false;sh.innerHTML=`<div class="note">${coordTxt(pickPt)}</div><div class="row"><input id="pName" type="text" placeholder="给这个地点起个名字（可选）"></div><div class="row"><button class="btn ghost" type="button" id="pSave" style="flex:1">收藏</button><button class="btn" type="button" id="pGo" style="flex:2">查看预报</button></div>`;
+    const nm=()=>($("#pName").value.trim()||`${pickPt.lat.toFixed(3)}, ${pickPt.lon.toFixed(3)}`);
+    $("#pSave").onclick=()=>{const s={name:nm(),...pickPt};if(!isFav(s)){favs.push(s);store.set("wr5.favs",favs)}toast("已收藏")};
+    $("#pGo").onclick=()=>openSpot({name:nm(),...pickPt});});
+  setTimeout(()=>pickMap.invalidateSize(),100);
+}
+
+/* ---------- SPOT ---------- */
+let spotMap=null,spotOvl=null,loadSeq=0;
+function showSpot(){
+  const v=$("#vSpot");
+  v.innerHTML=`<div class="top"><button class="round" type="button" id="spBack" aria-label="返回">${I.back}</button>
+    <div class="pill"><b id="spName">${esc(cur.name)}</b><button type="button" id="spFav" aria-pressed="${isFav(cur)}" aria-label="收藏">${I.star}</button><button type="button" id="spShare" aria-label="分享">${I.share}</button></div>
+    <button class="round" type="button" id="spSet" aria-label="设置">${I.gear}</button></div>
+    <div class="spotmap" id="spotMapBox"></div><div id="banner"></div><div id="app"><div class="loading">正在载入预报…</div></div>
+    <div class="foot">风来自所选模型；浪与涌近 10 天用最佳组合模型，之后用 NOAA GFS 海浪模型补到 16 天；潮汐根据 Open-Meteo 海平面数据（含过去 92 天）做调和分析推算，时间误差约半小时，礁石区活动请以 <a href="http://www.bom.gov.au/australia/tides/" target="_blank" rel="noopener">澳大利亚气象局潮汐表</a> 为准。建议帆面积为经验估算。数据：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>（CC BY 4.0）。</div>`;
+  $("#spBack").onclick=back;$("#spSet").onclick=setDrawer;
+  $("#spFav").onclick=e=>{toggleFav(cur);e.currentTarget.setAttribute("aria-pressed",isFav(cur))};
+  $("#spShare").onclick=async()=>{const url=`${location.origin}${location.pathname}?lat=${cur.lat}&lon=${cur.lon}&name=${encodeURIComponent(cur.name)}#spot`;
+    try{if(navigator.share){await navigator.share({title:cur.name+" 风浪潮",url});return}}catch(e){return}
+    try{await navigator.clipboard.writeText(url);toast("链接已复制")}catch(e){toast(url)}};
+  data=null;loadSpot();
+}
+const CMP=[["ecmwf_ifs025","ECMWF"],["gfs_seamless","GFS"],["icon_seamless","ICON"]];
+async function fetchRaw(s,m){
+  const base=m==="compare"?"best_match":m;const u=urls(s,base);
+  try{const[fc,mr,td]=await Promise.all([getJSON(u.fc),getJSON(u.mr),getJSON(u.td).catch(()=>null)]);
+    let cmp=null;if(m==="compare"){cmp={};await Promise.all(CMP.map(async([k])=>{try{cmp[k]=await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m&forecast_days=16&wind_speed_unit=kn&timezone=auto&models=${k}&cell_selection=sea`)}catch(e){}}))}
+    online=true;return{raw:{fc,mr,td,cmp},mode:"live"}}
+  catch(e){if(online==null)online=false}
+  if(SNAPSHOT&&sameSpot(SNAPSHOT.spot,s)){const cmp=m==="compare"?Object.fromEntries(CMP.map(([k])=>[k,SNAPSHOT.fc[k]])):null;
+    return{raw:{fc:SNAPSHOT.fc[base]||SNAPSHOT.fc.best_match,mr:SNAPSHOT.mr,td:SNAPSHOT.td,cmp,fetched:SNAPSHOT.fetched},mode:"snap"}}
+  return{raw:null}
+}
+async function loadSpot(){
+  const seq=++loadSeq;const r=await fetchRaw(cur,model);const raw=r.raw,mode=r.mode;
+  if(seq!==loadSeq)return;
+  if(!raw){$("#app").innerHTML=`<div class="banner"><b>载入失败</b>。${online===false?"当前环境不能联网，只有 Long Reef 有离线数据。放到 GitHub Pages 上即可查看任何地点。":"请检查网络后重试。"}</div>`;renderSpotMap();return}
+  data=normalize(raw);
+  const n=nowTh(data.tz);let i=data.hours.findIndex(h=>h.th>=n-0.5);selI=i<0?0:i;
+  $("#banner").innerHTML=mode==="snap"?`<div class="banner"><b>离线快照</b>，抓取于 ${new Date(raw.fetched).toLocaleString("zh-CN",{timeZone:"Australia/Sydney",month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false})}（悉尼时间）。当前环境不能联网。</div>`:"";
+  renderSpotMap();renderSpot(true);
+}
+function overlaySVG(h){
+  const C=90,R=56;
+  const band=(deg,color,len,wid,off,label)=>{if(deg==null)return"";
+    return`<g transform="rotate(${deg} ${C} ${C})"><rect x="${C-wid/2+off}" y="${C-R-26}" width="${wid}" height="${len}" rx="${wid/2}" fill="${color}" stroke="rgba(0,0,0,.25)" stroke-width="1"/><path d="M${C+off} ${C-R-26+len+9} l-${wid/2} -10 h${wid} z" fill="${color}" stroke="${color}" stroke-width="4" stroke-linejoin="round"/></g>`};
+  let ticks="";for(let i=0;i<36;i++){const a=i*10*Math.PI/180,r2=i%9===0?R-7:R-3;ticks+=`<line x1="${C+Math.sin(a)*R}" y1="${C-Math.cos(a)*R}" x2="${C+Math.sin(a)*r2}" y2="${C-Math.cos(a)*r2}" stroke="rgba(20,40,52,.55)" stroke-width="${i%9===0?2:1}" stroke-linecap="round"/>`}
+  return`<svg viewBox="0 0 180 180" width="180" height="180"><circle cx="${C}" cy="${C}" r="${R}" fill="rgba(255,255,255,.18)" stroke="rgba(20,40,52,.45)" stroke-width="1.2"/>${ticks}
+    <text x="${C}" y="${C-R+16}" text-anchor="middle" font-size="13" font-weight="700" fill="#e0353b" font-family="Barlow Condensed,sans-serif">N</text>
+    ${band(h.wdir,"#9fd0ef",58,14,7)}${band(h.wd,windColor(h.ws),64,18,-8)}<circle cx="${C}" cy="${C}" r="4.5" fill="#183140" stroke="#fff" stroke-width="2"/></svg>`;
+}
+function renderSpotMap(){
+  const box=$("#spotMapBox");if(!box)return;
+  if(spotMap){spotMap.remove();spotMap=null;spotOvl=null}
+  const h=data&&data.hours[selI];
+  if(!mapOK()){box.innerHTML=`<div class="compassonly" style="background:var(--deep)">${h?overlaySVG(h):""}</div>${h?roHTML(h):""}`;return}
+  box.innerHTML=`<div class="map" id="spotMap"></div><button class="mapbtn" type="button" id="mapBig" aria-label="放大地图">${I.expand}</button><div id="roBox">${h?roHTML(h):""}</div>`;
+  spotMap=L.map("spotMap",{zoomControl:false,dragging:!L.Browser.mobile,tap:false,scrollWheelZoom:false,doubleClickZoom:true}).setView([cur.lat,cur.lon],10);
+  L.tileLayer(TILE,{maxZoom:18,attribution:ATTR}).addTo(spotMap);
+  if(h)spotOvl=L.marker([cur.lat,cur.lon],{interactive:false,icon:L.divIcon({className:"ovl",html:overlaySVG(h),iconSize:[180,180],iconAnchor:[90,90]})}).addTo(spotMap);
+  $("#mapBig").onclick=()=>{const b=$("#spotMapBox");const big=b.classList.toggle("big");$("#mapBig").innerHTML=big?I.shrink:I.expand;spotMap.dragging[big?"enable":(L.Browser.mobile?"disable":"enable")]();spotMap.scrollWheelZoom[big?"enable":"disable"]();setTimeout(()=>{spotMap.invalidateSize();spotMap.setView([cur.lat,cur.lon])},280)};
+}
+function roHTML(h){const s=sailFor(h.ws);
+  return`<div class="ro"><span class="t">${String(h.hh).padStart(2,"0")}:00</span><span class="k">${h.date===localDateIn(data.tz)?"今天":"周"+WK[wk(h.date)]}</span>
+    <span><b style="color:${windColor(h.ws)}">${wv(h.ws)}</b> <span class="k">${wu()} ${dirName(h.wd)}</span></span><span><b>${f1(h.wh)}</b> <span class="k">米 ${f1(h.wp)}秒</span></span>
+    <span class="sail">${s.v?sailIcon+`<b>${s.v}</b><span class="k">m²</span>`:`<span class="k">${s.low?"风太小":"风太大"}</span>`}</span></div>`}
+function updateOverlay(){if(!data)return;const h=data.hours[selI];if(spotOvl)spotOvl.setIcon(L.divIcon({className:"ovl",html:overlaySVG(h),iconSize:[180,180],iconAnchor:[90,90]}));
+  const rb=$("#roBox");if(rb)rb.innerHTML=roHTML(h);else if(!spotMap){const b=$("#spotMapBox");if(b)b.innerHTML=`<div class="compassonly" style="background:var(--deep)">${overlaySVG(h)}</div>${roHTML(h)}`}}
+
 function shownHours(){return data.hours.filter(h=>h.hh%cfg.step===0)}
 function snapSel(){const hs=data.hours;if(cfg.step>1){let i=selI;while(i>0&&hs[i].hh%cfg.step)i--;selI=i}}
-
-function render(scroll){
-  snapSel();
-  const d=data,h=d.hours[selI],today=localDateIn(d.tz);
-  let html="";
-  html+=nowCard(h);
-  html+=`<div class="models" role="group" aria-label="风的预报模型">${MODELS.map(([k,l])=>`<button type="button" data-m="${k}" aria-pressed="${k===model}">${l}</button>`).join("")}</div>`;
-  // day tabs
+function renderSpot(scroll){
+  snapSel();const d=data,h=d.hours[selI],today=localDateIn(d.tz);
+  let html=`<div class="models" role="group" aria-label="风的预报模型">${MODELS.map(([k,l])=>`<button type="button" data-m="${k}" aria-pressed="${k===model}">${l}</button>`).join("")}</div>`;
   html+=`<div><div class="daytabs" id="days">${d.dates.map((dt,i)=>{const w=wk(dt);return`<button type="button" data-d="${dt}" class="${w===0||w===6?"we":""}${i>=7?" far":""}" aria-pressed="${dt===h.date}"><span class="w">${dt===today?"今天":"周"+WK[w]}</span><span class="n">${dt.slice(8)}</span></button>`}).join("")}</div>`;
   const stops=d.hours.map((x,i)=>`${windColor(x.ws)} ${(i/(d.hours.length-1)*100).toFixed(2)}%`).join(",");
   html+=`<div class="timeline" id="tl"><div class="bar" style="background:linear-gradient(90deg,${stops})"></div><div class="win" style="left:${(selI/(d.hours.length-1)*100).toFixed(2)}%;width:${Math.max(22,100/d.hours.length*24)}px"></div></div>
     <div class="tlnote"><span>拖动或点击色条选择时间</span><span>第 8 天以后只看趋势</span></div></div>`;
-  html+=sheet();
-  html+=tideCard(h.date);
-  html+=metaCard(h.date);
-  $("#app").innerHTML=html;
-  if(scroll)scrollToSel(false);
+  html+=sheet()+tideCard(h.date)+metaCard(h.date);
+  $("#app").innerHTML=html;updateOverlay();
+  if(scroll)scrollToSel();
 }
-
-function nowCard(h){
-  const s=sailFor(h.ws);const n=nowTh(data.tz);const isNow=n&&Math.abs(h.th-n)<1;
-  const sailTxt=s.v?`<b>${s.v}</b><span>m² 建议帆${s.own?"（你的帆）":""}<br>体重 ${cfg.weight} kg</span>`:s.low?`<b>–</b><span>风太小，最大 ${cfg.maxSail} m² 也难滑行</span>`:`<b>!</b><span>风太大，比你最小的 ${cfg.minSail} m² 帆还需要更小</span>`;
-  return`<div class="now">${compass(h)}<div class="nowinfo">
-    <div class="nowtime">${isNow?"<b>现在</b> · ":""}周${WK[wk(h.date)]} ${+h.date.slice(5,7)}月${+h.date.slice(8)}日 <b>${String(h.hh).padStart(2,"0")}:00</b></div>
-    <div class="stat"><span class="big" style="color:${windColor(h.ws)}">${wv(h.ws)}</span><span class="u">${wu()} · 阵风 ${wv(h.wg)}</span><span class="lab">${card(h.wd)}</span></div>
-    <div class="stat"><span class="big" style="color:var(--wave)">${f1(h.wh)}</span><span class="u">米 · ${f1(h.wp)} 秒</span><span class="lab">浪${cardW(h.wdir)}${h.tide!=null?` · 潮位 ${h.tide>=0?"+":""}${h.tide.toFixed(2)} 米`:""}</span></div>
-    <div class="sailbadge">${sailIcon}${sailTxt}</div></div></div>`;
-}
-
-function compass(h){
-  const C=100,R=78;
-  const band=(deg,color,len,wid,label,off)=>{if(deg==null)return"";
-    // band starts outside and points to centre from the direction it comes from
-    const a=deg*Math.PI/180,sx=C+Math.sin(a)*(R+18),sy=C-Math.cos(a)*(R+18);
-    return`<g transform="rotate(${deg} ${C} ${C})"><rect x="${C-wid/2+off}" y="${C-R-18}" width="${wid}" height="${len}" rx="${wid/2}" fill="${color}" opacity=".95"/><path d="M${C+off} ${C-R-18+len+10} l-${wid/2+1} -11 h${wid+2} z" fill="${color}" stroke="${color}" stroke-width="4" stroke-linejoin="round"/></g>`};
-  let ticks="";for(let i=0;i<72;i++){const a=i*5*Math.PI/180,r1=R,r2=i%6===0?R-8:R-4;ticks+=`<line x1="${C+Math.sin(a)*r1}" y1="${C-Math.cos(a)*r1}" x2="${C+Math.sin(a)*r2}" y2="${C-Math.cos(a)*r2}" stroke="var(--line)" stroke-width="${i%6===0?2:1}"/>`}
-  const lab=(t,a,col)=>{const r=R-20,x=C+Math.sin(a*Math.PI/180)*r,y=C-Math.cos(a*Math.PI/180)*r+6;return`<text x="${x}" y="${y}" text-anchor="middle" font-size="17" font-weight="700" fill="${col}">${t}</text>`};
-  return`<svg viewBox="0 0 200 200" width="100%" role="img" aria-label="风向与浪向罗盘"><circle cx="${C}" cy="${C}" r="${R}" fill="var(--bg)" stroke="var(--line)" stroke-width="1.5"/>${ticks}
-    ${lab("北",0,"var(--red)")}${lab("东",90,"var(--muted)")}${lab("南",180,"var(--muted)")}${lab("西",270,"var(--muted)")}
-    ${band(h.wdir,"#d6e6ee",70,16,"",9)}${band(h.wd,windColor(h.ws),78,20,"",-9)}
-    <circle cx="${C}" cy="${C}" r="5" fill="var(--ink)"/></svg>`;
-}
-
 function sheet(){
   const d=data,hs=shownHours(),sel=d.hours[selI];
   const groups=[];hs.forEach(h=>{const g=groups[groups.length-1];if(g&&g.date===h.date)g.n++;else groups.push({date:h.date,n:1})});
   const isNight=h=>{const s=d.sun[h.date];if(!s)return false;return h.hh<+s.rise.slice(11,13)||h.hh>+s.set.slice(11,13)};
   const tideMarks=new Map();d.tideX.forEach(x=>{const k=Math.round(x.t/cfg.step)*cfg.step;tideMarks.set(k,x)});
   const cls=(h,i,extra)=>{const c=[extra||""];if(i===0||hs[i-1].date!==h.date)c.push("d0");if(isNight(h))c.push("night");if(h.th===sel.th)c.push("col");return c.join(" ")};
-  const rows=[
-    ["hr","",h=>String(h.hh).padStart(2,"0")],
+  const rows=[["hr","",h=>String(h.hh).padStart(2,"0")],
     ["sail","建议帆<br>m²",h=>{const s=sailFor(h.ws);return s.v?`${s.v}${sailIcon}`:s.high?`<span class="ov">风大</span>`:"–"}],
-    ["","风向",h=>arrow(h.wd)],
-    ["c","风速<br>"+wu(),h=>wv(h.ws),h=>`background:${windColor(h.ws)}`],
-    ["c","阵风<br>"+wu(),h=>wv(h.wg),h=>`background:${windColor(h.wg)}`],
-    ["s","气温<br>°C",h=>f0(h.temp)+"°"],
-    ["s","降水<br>毫米",h=>h.pr?f1(h.pr):"0"],
-    ["s","水温<br>°C",h=>f0(h.sst)+"°"],
-    ["sec","海浪"],
-    ["","浪向",h=>h.wdir==null?"–":`<span class="wbox">${arrow(h.wdir,16)}</span>`],
-    ["","浪高<br>米",h=>f1(h.wh)],
-    ["s","周期<br>秒",h=>f1(h.wp)],
-    ["s","涌浪<br>米",h=>f1(h.sh)],
-    ["s","涌周期<br>秒",h=>f1(h.sp)],
-  ];
-  if(d.tideX.length){rows.push(["tval","潮位<br>米",h=>{const m=tideMarks.get(h.th);return(m?`<span class="mk">${m.hi?"▲高":"▼低"} ${fmtHM(m.t)}</span>`:"")+`${h.tide>=0?"+":""}${h.tide.toFixed(1)}`}])}
+    ["","风向",h=>arrow(h.wd)],["c","风速<br>"+wu(),h=>wv(h.ws),h=>`background:${windColor(h.ws)}`],["c","阵风<br>"+wu(),h=>wv(h.wg),h=>`background:${windColor(h.wg)}`],
+    ...(model==="compare"?[["sec","各模型风速"],...CMP.map(([k,l])=>["c",l+"<br>"+wu(),h=>wv(h.cmp&&h.cmp[k]),h=>`background:${windColor(h.cmp&&h.cmp[k])}`])]:[]),
+    ["s","气温<br>°C",h=>f0(h.temp)+"°"],["s","降水<br>毫米",h=>h.pr?f1(h.pr):"0"],["s","水温<br>°C",h=>h.sst==null?"–":f0(h.sst)+"°"],
+    ["sec","海浪"],["","浪向",h=>h.wdir==null?"–":`<span class="wbox">${arrow(h.wdir,16)}</span>`],["","浪高<br>米",h=>f1(h.wh)],["s","周期<br>秒",h=>f1(h.wp)],["s","涌浪<br>米",h=>f1(h.sh)],["s","涌周期<br>秒",h=>f1(h.sp)]];
+  if(d.tideX.length)rows.push(["tval","潮位<br>米",h=>{const m=tideMarks.get(h.th);return(m?`<span class="mk">${m.hi?"▲高":"▼低"} ${fmtHM(m.t)}</span>`:"")+`${h.tide>=0?"+":""}${h.tide.toFixed(1)}`}]);
   let s=`<div class="sheetbox"><div class="sheetwrap" id="sheet"><table class="sheet"><tbody><tr class="date"><th class="lab">${cfg.step===1?"逐时":"3 小时"}</th>`;
-  groups.forEach(g=>s+=`<th colspan="${g.n}" id="dh-${g.date}"><span>周${WK[wk(g.date)]}，${+g.date.slice(5,7)}月${+g.date.slice(8)}日</span></th>`);s+="</tr>";
+  groups.forEach(g=>s+=`<th colspan="${g.n}"><span>周${WK[wk(g.date)]}，${+g.date.slice(5,7)}月${+g.date.slice(8)}日</span></th>`);s+="</tr>";
   rows.forEach((r,ri)=>{const[c,label,fn,st]=r;
     if(c==="sec"){s+=`<tr class="sec"><th class="lab">${label}</th><td colspan="${hs.length}"></td></tr>`;return}
     s+=`<tr class="${c==="hr"?"hr":""}${ri===rows.length-1?" last":""}"><th class="lab">${label}</th>`;
     hs.forEach((h,i)=>{s+=`<td data-th="${h.th}" class="${cls(h,i,c==="hr"?"":c)}"${st?` style="${st(h)}"`:""}>${fn(h)}</td>`});s+="</tr>"});
   return s+"</tbody></table></div></div>";
 }
-
 function tideCard(day){
   if(!fit)return`<div class="card"><h2>潮汐</h2><div class="note">这个地点没有可用的海平面数据，无法推算潮汐。</div></div>`;
   const ex=data.tideX.filter(x=>dayKey(x.t)===day);
   return`<div class="card"><h2>潮汐 · <b>周${WK[wk(day)]} ${+day.slice(5,7)}月${+day.slice(8)}日</b></h2>${tideSVG(day)}
-    <div class="tidelist">${ex.map(x=>`<div class="tl"><span class="k">${x.hi?"高潮 ▲":"低潮 ▼"}</span><span class="v">${fmtHM(x.t)}</span><span class="h">${x.h>=0?"+":""}${x.h.toFixed(2)} 米</span></div>`).join("")}</div>
-    <div class="note">高度相对平均海平面。看潮池、走礁石选低潮前后 1–2 小时；帆板下水注意高潮时岸边浪更容易拍上礁石。</div></div>`;
+    <div class="tidelist">${ex.map(x=>`<div class="tl"><span class="k">${x.hi?"高潮":"低潮"}</span><span class="v">${fmtHM(x.t)}</span><span class="h">${x.h>=0?"+":""}${x.h.toFixed(2)} 米</span></div>`).join("")}</div>
+    <div class="note">高度相对平均海平面。看潮池、走礁石选低潮前后 1–2 小时。</div></div>`;
 }
 function tideSVG(day){
-  const W=Math.round(Math.max(320,Math.min(680,(document.querySelector(".wrap")?.clientWidth||680)-28))),Hh=180,pl=34,pr=8,pt=22,pb=24;const t0=parseT(day+"T00:00"),t1=t0+24;
+  const W=Math.round(Math.max(320,Math.min(680,($("#vSpot")?.clientWidth||680)-60))),Hh=170,pl=34,pr=8,pt=22,pb=24;const t0=parseT(day+"T00:00"),t1=t0+24;
   const f=fit.h;const pts=[];for(let t=t0;t<=t1+1e-9;t+=0.25)pts.push([t,f(t)]);
   const all=data.tideX.map(x=>x.h);const gmn=Math.min(...all,-0.8)-0.05,gmx=Math.max(...all,0.8)+0.05;
   const x=t=>pl+(t-t0)/24*(W-pl-pr),y=v=>pt+(gmx-v)/(gmx-gmn)*(Hh-pt-pb);
   const s=data.sun[day];let night="";
   if(s){const r=parseT(s.rise),st=parseT(s.set);night=`<rect x="${pl}" y="${pt}" width="${x(r)-pl}" height="${Hh-pt-pb}" fill="var(--night)"/><rect x="${x(st)}" y="${pt}" width="${W-pr-x(st)}" height="${Hh-pt-pb}" fill="var(--night)"/>`}
   const path="M"+pts.map(p=>x(p[0]).toFixed(1)+" "+y(p[1]).toFixed(1)).join(" L");
-  let g="";for(let hh=0;hh<=24;hh+=3)g+=`<text x="${x(t0+hh)}" y="${Hh-6}" text-anchor="middle" font-size="12" fill="var(--muted)">${String(hh).padStart(2,"0")}</text>`;
-  [-1,-0.5,0,0.5,1].filter(v=>v>=gmn&&v<=gmx).forEach(v=>g+=`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-dasharray="${v===0?"":"2 4"}"/><text x="${pl-5}" y="${y(v)+4}" text-anchor="end" font-size="12" fill="var(--muted)">${v>0?"+":""}${v}</text>`);
-  let mk="";data.tideX.filter(e=>e.t>=t0&&e.t<t1).forEach(e=>{const X=x(e.t),Y=y(e.h);mk+=`<circle cx="${X}" cy="${Y}" r="4" fill="var(--tide)"/><text x="${Math.min(Math.max(X,pl+18),W-pr-18)}" y="${e.hi?Y-9:Y+18}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">${fmtHM(e.t)}</text>`});
-  const sel=data.hours[selI];let sl="";if(sel.date===day)sl=`<line x1="${x(sel.th)}" x2="${x(sel.th)}" y1="${pt-6}" y2="${Hh-pb}" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 3"/>`;
-  const n=nowTh(data.tz);let now="";if(n&&n>=t0&&n<=t1)now=`<line x1="${x(n)}" x2="${x(n)}" y1="${pt}" y2="${Hh-pb}" stroke="var(--accent)" stroke-width="2"/><text x="${Math.min(x(n)+4,W-30)}" y="${pt-8}" font-size="12" fill="var(--accent)">现在</text>`;
-  return`<svg viewBox="0 0 ${W} ${Hh}" width="100%" style="display:block" role="img" aria-label="当日潮汐曲线">${night}${g}<path d="${path} L${x(t1)} ${Hh-pb} L${x(t0)} ${Hh-pb} Z" fill="var(--tidefill)"/><path d="${path}" fill="none" stroke="var(--tide)" stroke-width="2.5"/>${mk}${sl}${now}</svg>`;
+  let g="";for(let hh=0;hh<=24;hh+=3)g+=`<text x="${x(t0+hh)}" y="${Hh-6}" text-anchor="middle" font-size="12" fill="var(--muted)" font-family="Barlow Condensed,sans-serif">${String(hh).padStart(2,"0")}</text>`;
+  [-1,-0.5,0,0.5,1].filter(v=>v>=gmn&&v<=gmx).forEach(v=>g+=`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-dasharray="${v===0?"":"2 4"}"/><text x="${pl-5}" y="${y(v)+4}" text-anchor="end" font-size="12" fill="var(--muted)" font-family="Barlow Condensed,sans-serif">${v>0?"+":""}${v}</text>`);
+  let mk="";data.tideX.filter(e=>e.t>=t0&&e.t<t1).forEach(e=>{const X=x(e.t),Y=y(e.h);mk+=`<circle cx="${X}" cy="${Y}" r="4.5" fill="var(--tide)" stroke="var(--deep)" stroke-width="2"/><text x="${Math.min(Math.max(X,pl+18),W-pr-18)}" y="${e.hi?Y-10:Y+19}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)" font-family="Barlow Condensed,sans-serif">${fmtHM(e.t)}</text>`});
+  const sel=data.hours[selI];let sl="";if(sel.date===day)sl=`<line x1="${x(sel.th)}" x2="${x(sel.th)}" y1="${pt-6}" y2="${Hh-pb}" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 3" stroke-linecap="round"/>`;
+  return`<svg viewBox="0 0 ${W} ${Hh}" width="100%" style="display:block" role="img" aria-label="当日潮汐曲线">${night}${g}<path d="${path} L${x(t1)} ${Hh-pb} L${x(t0)} ${Hh-pb} Z" fill="var(--tidefill)"/><path d="${path}" fill="none" stroke="var(--tide)" stroke-width="2.5" stroke-linecap="round"/>${mk}${sl}</svg>`;
 }
 function metaCard(day){
   const s=data.sun[day];const ml=MODELS.find(m=>m[0]===model)[1];
   return`<div class="card"><div class="meta">${s?`<div class="sun"><span>日出 ${s.rise.slice(11)}</span><span>日落 ${s.set.slice(11)}</span></div>`:""}
-  <div>风的预报模型：<b style="color:var(--ink)">${ml}</b>。不同模型数值会有差异，可以切换对比；差得越多，说明这段时间越不确定。</div>
+  <div>风的预报模型：<b style="color:var(--ink)">${ml}</b>。${model==="compare"?"表格里同时列出 ECMWF、GFS、ICON 的风速，几个模型越接近，预报越可信。":"不同模型数值会有差异，可以选“模型对比”一起看。"}</div>
   <div class="legend">${[0,4,8,11,15,18,22,26,31,40].map(k=>`<i style="background:${windColor(k)}"></i>`).join("")}</div>
   <div class="legendlab"><span>0</span><span>8</span><span>15</span><span>22</span><span>31</span><span>40+ 节</span></div></div></div>`;
 }
+function scrollToSel(){const wrap=$("#sheet");const td=wrap&&wrap.querySelector("td.col");if(td)wrap.scrollLeft=Math.max(0,td.offsetLeft-62-td.offsetWidth*1.5);
+  const b=document.querySelector(`#days button[aria-pressed="true"]`),ds=$("#days");if(b&&ds)ds.scrollLeft=Math.max(0,b.offsetLeft-ds.clientWidth/2+b.clientWidth/2)}
+function select(i,scroll){selI=Math.max(0,Math.min(data.hours.length-1,i));const sx=$("#sheet")?.scrollLeft;renderSpot(false);if(scroll)scrollToSel();else if(sx!=null)$("#sheet").scrollLeft=sx}
 
-function scrollToSel(smooth){
-  const wrap=$("#sheet");const td=wrap&&wrap.querySelector("td.col");if(td){wrap.scrollTo({left:Math.max(0,td.offsetLeft-62-td.offsetWidth*1.5),behavior:smooth?"smooth":"auto"})}
-  const b=document.querySelector(`#days button[aria-pressed="true"]`),ds=$("#days");if(b&&ds)ds.scrollLeft=Math.max(0,b.offsetLeft-ds.clientWidth/2+b.clientWidth/2);
-}
-function select(i,scroll){selI=Math.max(0,Math.min(data.hours.length-1,i));const sx=$("#sheet")?.scrollLeft;render(false);if(scroll)scrollToSel(false);else if(sx!=null)$("#sheet").scrollLeft=sx}
-
-/* ---------- drawers ---------- */
+/* ---------- settings drawer ---------- */
 function openDrawer(html,onMount){$("#layer").innerHTML=`<div class="scrim" id="scrim"><div class="drawer" role="dialog" aria-modal="true">${html}</div></div>`;
   $("#scrim").addEventListener("click",e=>{if(e.target.id==="scrim"||e.target.closest("[data-close]"))closeDrawer()});onMount&&onMount()}
 function closeDrawer(){$("#layer").innerHTML=""}
-
-function spotDrawer(){
-  const list=()=>spots.map((s,i)=>`<div class="item" aria-current="${sameSpot(s,cur)}"><button type="button" data-pick="${i}" style="all:unset;flex:1;cursor:pointer"><span>${esc(s.name)}</span><br><small>${s.lat.toFixed(3)}, ${s.lon.toFixed(3)}</small></button>${spots.length>1?`<button type="button" class="del" data-del="${i}" aria-label="删除 ${esc(s.name)}">×</button>`:""}</div>`).join("");
-  openDrawer(`<h3>地点<button type="button" data-close>完成</button></h3>
-    <div class="srow"><input id="q" type="search" placeholder="搜索海滩或地名，或输入 纬度,经度" autocomplete="off"><button class="btn" id="go" type="button">搜索</button></div>
-    <div class="list" id="res"></div><div class="field"><label>我收藏的地点</label><div class="list" id="saved">${list()}</div></div>`,()=>{
-    const run=async()=>{const q=$("#q").value.trim(),box=$("#res");if(!q)return;
-      const m=q.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,，\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
-      if(m){addSpot({name:`${(+m[1]).toFixed(3)}, ${(+m[2]).toFixed(3)}`,lat:+m[1],lon:+m[2]});return}
-      box.innerHTML='<div class="note">搜索中…</div>';
-      try{const r=await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=zh&format=json`);const res=r.results||[];
-        box.innerHTML=res.length?res.map((p,i)=>`<button type="button" class="item" data-r="${i}"><span>${esc(p.name)}<br><small>${esc([p.admin1,p.country].filter(Boolean).join("，"))}</small></span>＋</button>`).join(""):'<div class="msg">没找到。可以试试英文名（如 Long Reef），或直接输入 纬度,经度。</div>';
-        box.onclick=e=>{const b=e.target.closest("[data-r]");if(b){const p=res[+b.dataset.r];addSpot({name:p.name,lat:p.latitude,lon:p.longitude})}};
-      }catch(e){box.innerHTML='<div class="msg">搜索需要联网访问 open-meteo.com，当前预览环境不允许。放到 GitHub Pages 等普通网址后即可搜索。也可以直接输入 纬度,经度 添加地点。</div>'}};
-    $("#go").onclick=run;$("#q").addEventListener("keydown",e=>{if(e.key==="Enter")run()});
-    $("#saved").onclick=e=>{const d=e.target.closest("[data-del]");if(d){const i=+d.dataset.del;const was=sameSpot(spots[i],cur);spots.splice(i,1);store.set("wr.spots",spots);$("#saved").innerHTML=list();if(was)choose(spots[0]);return}
-      const p=e.target.closest("[data-pick]");if(p){choose(spots[+p.dataset.pick]);closeDrawer()}};
-  });
-  function addSpot(s){if(!spots.some(x=>sameSpot(x,s))){spots.push(s);store.set("wr.spots",spots)}choose(s);closeDrawer()}
-}
-function choose(s){cur=s;store.set("wr.cur",cur);load()}
-
 function setDrawer(){
   const seg=(id,opts,val)=>`<div class="seg" id="${id}">${opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${String(v)===String(val)}">${l}</button>`).join("")}</div>`;
   openDrawer(`<h3>设置<button type="button" data-close>完成</button></h3>
-    <div class="field"><label>帆板：你的体重</label><div class="srow"><input id="weight" type="number" inputmode="decimal" min="30" max="150" step="1" value="${cfg.weight}"><span style="align-self:center;color:var(--muted)">公斤</span></div><div class="hint">按经验公式 帆面积 ≈ 1.34 × 体重 ÷ 风速（节）估算建议帆。</div></div>
-    <div class="two"><div class="field"><label>最小的帆（m²）</label><input id="minSail" type="number" inputmode="decimal" step="0.1" value="${cfg.minSail}"></div>
-      <div class="field"><label>最大的帆（m²）</label><input id="maxSail" type="number" inputmode="decimal" step="0.1" value="${cfg.maxSail}"></div></div>
+    <div class="field"><label>帆板：你的体重（公斤）</label><input id="weight" type="number" inputmode="decimal" min="30" max="150" step="1" value="${cfg.weight}"><div class="hint">建议帆按经验公式估算：帆面积 ≈ 1.34 × 体重 ÷ 风速（节）。</div></div>
+    <div class="two"><div class="field"><label>最小的帆（m²）</label><input id="minSail" type="number" inputmode="decimal" step="0.1" value="${cfg.minSail}"></div><div class="field"><label>最大的帆（m²）</label><input id="maxSail" type="number" inputmode="decimal" step="0.1" value="${cfg.maxSail}"></div></div>
     <div class="field"><label>我有的帆（可选，用逗号分隔）</label><input id="quiver" type="text" placeholder="例如 4.7, 5.8, 7.0, 8.5" value="${esc(cfg.quiver)}"><div class="hint">填了以后，建议会直接选你手上最接近的那张帆。</div></div>
-    <div class="field"><label>风格</label>${seg("style",[["safe","保守"],["std","标准"],["bold","激进"]],cfg.style)}<div class="hint">保守＝更小的帆、更好控制；激进＝更大的帆、更早滑行。</div></div>
+    <div class="field"><label>风格</label>${seg("style",[["safe","保守"],["std","标准"],["bold","激进"]],cfg.style)}</div>
     <div class="field"><label>风速单位</label>${seg("unit",[["kn","节"],["ms","米/秒"],["kmh","公里/时"]],cfg.unit)}</div>
     <div class="field"><label>表格时间间隔</label>${seg("step",[[1,"逐 1 小时"],[3,"逐 3 小时"]],cfg.step)}</div>`,()=>{
-    const num=(id,min,max)=>{const el=$("#"+id);el.addEventListener("change",()=>{let v=parseFloat(el.value);if(!isFinite(v))v=cfg[id];v=Math.max(min,Math.min(max,v));el.value=v;cfg[id]=v;if(cfg.minSail>cfg.maxSail){const t=cfg.minSail;cfg.minSail=cfg.maxSail;cfg.maxSail=t}save()})};
+    const num=(id,min,max)=>{const el=$("#"+id);el.addEventListener("change",()=>{let v=parseFloat(el.value);if(!isFinite(v))v=cfg[id];v=Math.max(min,Math.min(max,v));el.value=v;cfg[id]=v;if(id==="weight")cfg.weightSet=true;if(cfg.minSail>cfg.maxSail){[cfg.minSail,cfg.maxSail]=[cfg.maxSail,cfg.minSail]}save()})};
     num("weight",30,150);num("minSail",1,13);num("maxSail",1,13);
     $("#quiver").addEventListener("change",e=>{cfg.quiver=e.target.value;save()});
     ["style","unit","step"].forEach(id=>$("#"+id).addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(!b)return;cfg[id]=id==="step"?+b.dataset.v:b.dataset.v;$("#"+id).querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));save()}));
   });
-  function save(){store.set("wr.cfg",cfg);if(data)select(selI,true)}
+  function save(){store.set("wr.cfg",cfg);if(!$("#vSpot").hidden&&data)select(selI,true);if(!$("#vHome").hidden){renderFavs();const d=$("#hMenu .dot");if(d&&cfg.weightSet)d.remove()}}
 }
 
-/* ---------- events ---------- */
-$("#spotBtn").onclick=spotDrawer;
-$("#setBtn").onclick=setDrawer;
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer()});
-$("#app").addEventListener("click",e=>{
-  const m=e.target.closest("[data-m]");if(m){if(m.dataset.m!==model){model=m.dataset.m;store.set("wr.model",model);const th=data&&data.hours[selI].th;load().then(()=>{if(data&&th){const i=data.hours.findIndex(h=>h.th===th);if(i>=0)select(i,true)}})}return}
+/* ---------- spot page events ---------- */
+document.addEventListener("click",e=>{
+  if($("#vSpot").hidden||!data)return;
+  const m=e.target.closest("#app [data-m]");if(m){if(m.dataset.m!==model){model=m.dataset.m;store.set("wr5.model",model);const th=data.hours[selI].th;
+    const seq=++loadSeq;fetchRaw(cur,model)
+      .then(({raw})=>{if(!raw||seq!==loadSeq)return;data=normalize(raw);const i=data.hours.findIndex(h=>h.th===th);selI=i<0?0:i;renderSpot(true)})}return}
   const dbtn=e.target.closest("#days [data-d]");if(dbtn){const dt=dbtn.dataset.d;const n=nowTh(data.tz);let i=data.hours.findIndex(h=>h.date===dt&&h.hh===12);if(dt===localDateIn(data.tz)){const j=data.hours.findIndex(h=>h.th>=n-0.5);if(j>=0)i=j}if(i<0)i=data.hours.findIndex(h=>h.date===dt);select(i,true);return}
-  const td=e.target.closest("td[data-th]");if(td){const th=+td.dataset.th;select(data.hours.findIndex(h=>h.th===th),false);return}
+  const td=e.target.closest("#sheet td[data-th]");if(td){select(data.hours.findIndex(h=>h.th===+td.dataset.th),false);return}
 });
 let dragging=false;
 function tlPick(e){const tl=$("#tl");if(!tl)return;const r=tl.getBoundingClientRect();const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));select(Math.round(p*(data.hours.length-1)),true)}
-$("#app").addEventListener("pointerdown",e=>{if(e.target.closest("#tl")){dragging=true;tlPick(e)}});
+document.addEventListener("pointerdown",e=>{if(e.target.closest("#tl")&&data){dragging=true;tlPick(e)}});
 window.addEventListener("pointermove",e=>{if(dragging)tlPick(e)});
 window.addEventListener("pointerup",()=>dragging=false);
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer()});
 
-load();
+/* ---------- start ---------- */
+(function init(){
+  const p=new URLSearchParams(location.search);
+  if(p.get("lat")&&p.get("lon")){cur={name:p.get("name")||"分享的地点",lat:+p.get("lat"),lon:+p.get("lon")};store.set("wr5.cur",cur);history.replaceState(null,"",location.pathname+"#spot")}
+  route();
+})();
 })();
 </script>
 

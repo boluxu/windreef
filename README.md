@@ -1,7 +1,9 @@
-# 风浪潮 · Long Reef
+# 风浪潮
 
-帆板用的 16 天风、浪、潮汐预报网页。打开：https://boluxu.github.io/windreef/
+帆板用的风、浪、潮汐预报网站：https://boluxu.github.io/windreef/
 
-- 数据来自 [Open-Meteo](https://open-meteo.com/)（CC BY 4.0），仅限非商业用途
+- 首页：我的位置（5 天天气）、收藏地点（7 天风力条）、地图总览
+- 搜索：按名称或坐标搜索，最近查看，在地图上选点
+- 地点页：地图上的风浪方向、模型切换与对比、16 天逐时预报、建议帆面积、潮汐
+- 数据来自 [Open-Meteo](https://open-meteo.com/)（CC BY 4.0），仅限非商业用途；地图 © OpenStreetMap 贡献者
 - 潮汐为调和分析推算，精确潮时请以澳大利亚气象局为准
-- 建议帆面积按经验公式 帆面积 ≈ 1.34 × 体重 ÷ 风速（节）估算

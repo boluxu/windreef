@@ -434,7 +434,7 @@ function showHome(){
   v.innerHTML=`<div class="top"><button class="round" id="hMenu" type="button" aria-label="设置">${I.menu}${cfg.weightSet?"":'<span class="dot"></span>'}</button>
     <div class="duo"><button type="button" id="hSearch" aria-label="搜索地点">${I.search}</button><button type="button" id="hMap" aria-label="在地图上选点">${I.map}</button></div></div>
     <div class="hcard" id="myCard"></div>
-    <h2 class="sec">收藏的地点 <button type="button" id="hEdit">${editMode?"完成":"编辑"}</button></h2>
+    <h2 class="sec">收藏的地点<small style="font-size:11px;color:var(--dim);font-weight:400;margin-left:6px">v1117b</small> <button type="button" id="hEdit">${editMode?"完成":"编辑"}</button></h2>
     <div class="favs" id="favList"></div>
     <h2 class="sec">地图总览</h2>
     <div class="mapbox" id="homeMapBox"></div>
@@ -461,7 +461,7 @@ async function renderMyCard(){
     box.querySelector(".loading").outerHTML=`<button type="button" class="fav" id="myOpen" style="background:none;border-radius:0">
       ${m.days[0].code!=null?`<div class="wx">${m.days.slice(0,5).map(d=>{const w=wk(d.date);return`<div><div class="d">${d.date===today?"今天":"周"+WK[w]} ${d.date.slice(8)}</div>${wxIcon(d.code)}<div class="t">${f0(d.tmax)}°<small> ${f0(d.tmin)}°</small></div></div>`}).join("")}</div>`:""}${stripHTML(m)}</button>`;
     $("#myOpen").onclick=()=>openSpot(myLoc)}
-  catch(e){box.querySelector(".loading").outerHTML=`<div class="msg" style="padding:12px 16px">${online===false?"当前环境不能联网，放到 GitHub Pages 上即可显示。":"载入失败，稍后再试。"}</div>`}
+  catch(e){box.querySelector(".loading").outerHTML=`<div class="msg" style="padding:12px 16px">${online===false?"当前环境不能联网，放到 GitHub Pages 上即可显示。":"载入失败（"+esc(String(e&&e.message||e))+"），稍后再试。"}</div>`}
 }
 function renderFavs(){
   const box=$("#favList");if(!box)return;
@@ -475,7 +475,7 @@ function renderFavs(){
   favs.forEach(async(s,i)=>{try{const m=await getMini(s);const el=$("#fs"+i);if(el)el.innerHTML=stripHTML(m);
       const n=$("#fnow"+i);if(n&&m.now!=null)n.innerHTML=`<span class="nl">现在${m.nowt?" · 当地 "+m.nowt.slice(11,16):""}</span>${arrow(m.nowdir,16)} <b style="color:${windColor(m.now)}">${wv(m.now)}</b> ${wu()}`;
       s._now=m.now;s._dir=m.nowdir;if(online===false&&homeMap)renderHomeMap();else updateHomeMarkers()}
-    catch(e){if(online===false&&homeMap)renderHomeMap();const el=$("#fs"+i);if(el)el.innerHTML=`<div class="msg" style="padding:4px 16px 14px">${online===false?"当前环境不能联网，没有这个地点的离线数据。":"载入失败"}</div>`}});
+    catch(e){if(online===false&&homeMap)renderHomeMap();const el=$("#fs"+i);if(el)el.innerHTML=`<div class="msg" style="padding:4px 16px 14px">${online===false?"当前环境不能联网，没有这个地点的离线数据。":"载入失败（"+esc(String(e&&e.message||e))+"）"}</div>`}});
 }
 const TILE="https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const ATTR='© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';

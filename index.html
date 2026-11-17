@@ -367,7 +367,11 @@ function extrema(f,a,b){const out=[];const dt=0.1;let p=f(a-dt),c=f(a);for(let t
   return out.map(e=>{const y0=f(e.t-dt),y1=f(e.t),y2=f(e.t+dt);const d=(y0-2*y1+y2);const off=d?0.5*(y0-y2)/d*dt:0;return{t:e.t+off,h:f(e.t+off),hi:e.hi}})}
 
 /* ---------- data ---------- */
-async function getJSON(u){const r=await fetch(u);if(!r.ok){let m="";try{m=(await r.json()).reason}catch(e){}throw new Error(m||("HTTP "+r.status))}return r.json()}
+// 每个请求最多等 20 秒；超时或网络错误自动重试一次（之前没有超时，请求卡住就会一直显示“正在载入预报”）
+async function getJSON1(u,ms){const ac=new AbortController();const t=setTimeout(()=>ac.abort(),ms);
+  try{const r=await fetch(u,{signal:ac.signal,cache:"no-store"});if(!r.ok){let m="";try{m=(await r.json()).reason}catch(e){}const er=new Error(m||("HTTP "+r.status));er.http=r.status;throw er}return await r.json()}
+  catch(e){if(e.name==="AbortError")throw new Error("请求超时");throw e}finally{clearTimeout(t)}}
+async function getJSON(u){try{return await getJSON1(u,20000)}catch(e){if(e.http&&e.http<500&&e.http!==429)throw e;await new Promise(r=>setTimeout(r,1500));return getJSON1(u,25000)}}
 function urls(s,m){
   const fc=`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation,precipitation_probability&daily=sunrise,sunset&forecast_days=16&wind_speed_unit=kn&timezone=auto&models=${m}&cell_selection=${s.lake?"nearest":"sea"}`;
   const mv="wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,sea_surface_temperature";
@@ -417,6 +421,7 @@ function route(){
   window.scrollTo(0,0);
 }
 window.addEventListener("hashchange",route);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&location.hash==="#spot"&&document.querySelector("#app > .loading"))loadSpot()});
 window.addEventListener("popstate",()=>{if(!location.hash)route()});
 function openSpot(s){cur={name:s.name,lat:+s.lat,lon:+s.lon};if(s.lake)cur.lake=true;store.set("wr5.cur",cur);
   recent=[cur,...recent.filter(r=>!sameSpot(r,cur))].slice(0,12);store.set("wr5.recent",recent);
@@ -618,7 +623,7 @@ async function loadSpot(){
   if(w){const ctUsed=shown&&ct;if(!(shown&&Date.now()-cw.ts<30*60e3&&(!cs||Date.now()-cs.ts<30*60e3)))showData({fc:w.fc,cmp:w.cmp,mr:sea,tc:ctNow&&ctNow.v},"live")}
   else if(!shown){
     if(SNAPSHOT&&sameSpot(SNAPSHOT.spot,s)){const base=m==="compare"?"best_match":m;showData({fc:SNAPSHOT.fc[base]||SNAPSHOT.fc.best_match,mr:SNAPSHOT.mr,tc:tideCoef(SNAPSHOT.td),cmp:m==="compare"?Object.fromEntries(CMP.map(([k])=>[k,SNAPSHOT.fc[k]])):null,fetched:SNAPSHOT.fetched},"snap");return}
-    $("#app").innerHTML=`<div class="banner"><b>载入失败</b>。${online===false?"当前环境不能联网，只有 Long Reef 有离线数据。放到 GitHub Pages 上即可查看任何地点。":"请检查网络后重试。"}</div>`;renderSpotMap();return}
+    $("#app").innerHTML=`<div class="banner"><b>载入失败</b>。${online===false?"当前环境不能联网，只有 Long Reef 有离线数据。放到 GitHub Pages 上即可查看任何地点。":"请检查网络后重试。"} <button type="button" class="cta" id="spRetry" style="margin-top:8px">重试</button></div>`;{const rb=$("#spRetry");if(rb)rb.onclick=()=>{$("#app").innerHTML=`<div class="loading">正在载入预报…</div>`;loadSpot()}}renderSpotMap();return}
   const tc=await tideP;if(seq!==loadSeq||!data)return;
   if(tc&&!data.tc){applyTide(data,tc);renderSpot(false)}else if(!data.tc){const tb=$("#tideBox");if(tb)tb.innerHTML=tideCard(tb.dataset.day)}
 }

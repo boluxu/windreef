@@ -115,14 +115,16 @@ h2.sec button{border:0;background:none;color:var(--accent);font-size:15px;font-w
 .models{display:flex;gap:4px;background:var(--deep);border-radius:14px;padding:5px;overflow-x:auto;scrollbar-width:none}
 .models button{flex:none;border:0;background:transparent;border-radius:10px;padding:9px 14px;font-weight:600;color:var(--ink);white-space:nowrap}
 .models button[aria-pressed="true"]{background:var(--accent);color:var(--cellink)}
-.daytabs{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(52px,1fr);overflow-x:auto;scrollbar-width:none}
+.dayscroll{overflow-x:auto;scrollbar-width:none;position:relative}.dayscroll::-webkit-scrollbar{display:none}
+.dayinner{width:max-content;min-width:100%}
+.daytabs{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(52px,1fr)}
 .daytabs button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;padding:4px 0;color:var(--muted);font-family:var(--display);font-weight:600;line-height:1.1}
 .daytabs button .w{font-size:16px}
 .daytabs button .n{font-size:22px}
 .daytabs button.we{color:var(--ink)}
 .daytabs button[aria-pressed="true"]{color:var(--accent)}
 .daytabs button.far .n{opacity:.7}
-.timeline{position:relative;height:22px;margin:4px 6px 0;cursor:pointer;touch-action:pan-y}
+.timeline{position:relative;height:22px;margin:4px 0 0;cursor:pointer;touch-action:pan-y}
 .timeline .bar{position:absolute;inset:6px 0;border-radius:6px}
 .timeline .win{position:absolute;top:2px;bottom:2px;border:3px solid #fff;border-radius:9px;background:rgba(255,255,255,.25);pointer-events:none;min-width:22px;box-sizing:border-box;transition:left .08s linear}
 .tlnote{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin:2px 6px 0}
@@ -434,7 +436,7 @@ function showHome(){
   v.innerHTML=`<div class="top"><button class="round" id="hMenu" type="button" aria-label="设置">${I.menu}${cfg.weightSet?"":'<span class="dot"></span>'}</button>
     <div class="duo"><button type="button" id="hSearch" aria-label="搜索地点">${I.search}</button><button type="button" id="hMap" aria-label="在地图上选点">${I.map}</button></div></div>
     <div class="hcard" id="myCard"></div>
-    <h2 class="sec">收藏的地点<small style="font-size:11px;color:var(--dim);font-weight:400;margin-left:6px">v1117b</small> <button type="button" id="hEdit">${editMode?"完成":"编辑"}</button></h2>
+    <h2 class="sec">收藏的地点<small style="font-size:11px;color:var(--dim);font-weight:400;margin-left:6px">v1117c</small> <button type="button" id="hEdit">${editMode?"完成":"编辑"}</button></h2>
     <div class="favs" id="favList"></div>
     <h2 class="sec">地图总览</h2>
     <div class="mapbox" id="homeMapBox"></div>
@@ -659,9 +661,9 @@ function snapSel(){const hs=data.hours;if(cfg.step>1){let i=selI;while(i>0&&hs[i
 function renderSpot(scroll){
   snapSel();const d=data,h=d.hours[selI],today=localDateIn(d.tz);
   let html=`<div class="models" role="group" aria-label="风的预报模型">${MODELS.map(([k,l])=>`<button type="button" data-m="${k}" aria-pressed="${k===model}">${l}</button>`).join("")}</div>`;
-  html+=`<div><div class="daytabs" id="days">${d.dates.map((dt,i)=>{const w=wk(dt);return`<button type="button" data-d="${dt}" class="${w===0||w===6?"we":""}${i>=7?" far":""}" aria-pressed="${dt===h.date}"><span class="w">${dt===today?"今天":"周"+WK[w]}</span><span class="n">${dt.slice(8)}</span></button>`}).join("")}</div>`;
-  const stops=d.hours.map((x,i)=>`${windColor(x.ws)} ${(i/(d.hours.length-1)*100).toFixed(2)}%`).join(",");
-  html+=`<div class="timeline" id="tl"><div class="bar" style="background:linear-gradient(90deg,${stops})"></div><div class="win" id="tlwin"></div></div>
+  html+=`<div><div class="dayscroll" id="days"><div class="dayinner"><div class="daytabs">${d.dates.map((dt,i)=>{const w=wk(dt);return`<button type="button" data-d="${dt}" class="${w===0||w===6?"we":""}${i>=7?" far":""}" aria-pressed="${dt===h.date}"><span class="w">${dt===today?"今天":"周"+WK[w]}</span><span class="n">${dt.slice(8)}</span></button>`}).join("")}</div>`;
+  const stops=d.hours.map(x=>`${windColor(x.ws)} ${(tlPos(x)*100).toFixed(2)}%`).join(",");
+  html+=`<div class="timeline" id="tl"><div class="bar" style="background:linear-gradient(90deg,${stops})"></div><div class="win" id="tlwin"></div></div></div></div>
     <div class="tlnote"><span>拖动或点击色条选择时间</span><span>第 8 天以后只看趋势</span></div></div>`;
   html+=sheet()+`<div id="tideBox" data-day="${h.date}">${tideCard(h.date)}</div>`+metaCard(h.date);
   const pd=$("#days")?.scrollLeft,ps=$("#sheet")?.scrollLeft;
@@ -672,12 +674,13 @@ function renderSpot(scroll){
   if(scroll)scrollToSel(scroll===true?"center":scroll);else syncFromScroll();
 }
 // 表格横向滚动时：日期条高亮当前看到的那一天，色条上的白框标出当前看到的时间范围（和 Windy 一样联动）
+function tlPos(h){const n=data.dates.length,i=data.dates.indexOf(h.date);return i<0?0:(i+(h.hh+0.5)/24)/n}
 function syncFromScroll(){
   const wrap=$("#sheet"),hr=wrap&&wrap.querySelector("tr.hr");if(!hr||hr.cells.length<2)return;
   const lab=hr.cells[0].offsetWidth,colW=hr.cells[1].offsetWidth,hs=shownHours(),N=data.hours.length;
   const first=Math.max(0,Math.min(hs.length-1,Math.floor((wrap.scrollLeft+2)/colW))),visN=Math.max(1,(wrap.clientWidth-lab)/colW);
   const fi=data.hours.indexOf(hs[first]);const w=$("#tlwin");
-  if(w){w.style.left=(fi/N*100).toFixed(2)+"%";w.style.width=Math.min(100,visN*cfg.step/N*100).toFixed(2)+"%"}
+  if(w){const nd=data.dates.length,l=(data.dates.indexOf(hs[first].date)+hs[first].hh/24)/nd;w.style.left=(l*100).toFixed(2)+"%";w.style.width=Math.min(100-l*100,visN*cfg.step/24/nd*100).toFixed(2)+"%"}
   const day=hs[Math.min(hs.length-1,first+Math.floor(visN/3))].date;const ds=$("#days");if(!ds)return;
   let act=null;ds.querySelectorAll("button").forEach(b=>{const on=b.dataset.d===day;b.setAttribute("aria-pressed",on);if(on)act=b});
   const tb=$("#tideBox");if(tb&&tb.dataset.day!==day){tb.dataset.day=day;tb.innerHTML=tideCard(day)}
@@ -807,7 +810,7 @@ document.addEventListener("click",e=>{
 // 只跟踪在色条上按下的那一根手指；iOS 滚动时会发 pointercancel，必须一起结束拖动，
 // 否则下一次点别处时会被当成还在拖色条（之前点日期会跳到别的日子就是这个原因）
 let dragId=null;
-function tlPick(e){const tl=$("#tl");if(!tl)return;const r=tl.getBoundingClientRect();const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));select(Math.round(p*(data.hours.length-1)),"center")}
+function tlPick(e){const tl=$("#tl");if(!tl)return;const r=tl.getBoundingClientRect();const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));let bi=0,bd=9;data.hours.forEach((h,i)=>{const dd=Math.abs(tlPos(h)-p);if(dd<bd){bd=dd;bi=i}});select(bi,"center")}
 document.addEventListener("pointerdown",e=>{dragId=null;if(e.target.closest&&e.target.closest("#tl")&&data){dragId=e.pointerId;tlPick(e)}});
 window.addEventListener("pointermove",e=>{if(dragId!==null&&e.pointerId===dragId&&(e.pointerType!=="mouse"||e.buttons))tlPick(e)});
 ["pointerup","pointercancel","blur"].forEach(ev=>window.addEventListener(ev,()=>{dragId=null}));
